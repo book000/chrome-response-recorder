@@ -13,7 +13,7 @@ const ENVIRONMENT = {
         (regex) => new RegExp(regex.trim())
       )
     : [],
-  STARTUP_URLS: process.env.STARTUP_URLS ?? "",
+  STARTUP_URLS: process.env.STARTUP_URLS ?? '',
 } as const
 
 function registerResponseListener(page: Page) {
@@ -159,7 +159,9 @@ async function main() {
 
   // 初期URLを開く。2つ以上のURLが指定されている場合は、タブを新規に開いてアクセス
   // 1つ目のURLは最初のタブで開く
-  const startupUrls = ENVIRONMENT.STARTUP_URLS.split(',').map(url => url.trim());
+  const startupUrls = ENVIRONMENT.STARTUP_URLS.split(',').map((url) =>
+    url.trim()
+  )
   if (startupUrls.length > 0) {
     const firstUrl = startupUrls[0]
     console.log(`Opening initial URL: ${firstUrl}`)
