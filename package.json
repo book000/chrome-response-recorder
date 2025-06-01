@@ -1,0 +1,47 @@
+{
+  "name": "chrome-response-recorder",
+  "description": "",
+  "version": "0.0.0",
+  "author": "Tomachi <tomachi@tomacheese.com>",
+  "bugs": {
+    "url": "https://github.com/book000/chrome-response-recorder/issues"
+  },
+  "dependencies": {
+    "tsx": "4.19.4",
+    "puppeteer-core": "24.9.0"
+  },
+  "devDependencies": {
+    "@book000/eslint-config": "1.8.77",
+    "@book000/node-utils": "1.16.9",
+    "@types/node": "22.15.29",
+    "eslint": "9.28.0",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-n": "17.18.0",
+    "eslint-plugin-promise": "7.2.1",
+    "prettier": "3.5.3",
+    "run-z": "2.1.0",
+    "typescript": "5.8.3"
+  },
+  "homepage": "https://github.com/book000/chrome-response-recorder",
+  "license": "MIT",
+  "main": "dist/main.js",
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977",
+  "private": true,
+  "repository": {
+    "url": "git@github.com:book000/chrome-response-recorder.git",
+    "type": "git"
+  },
+  "scripts": {
+    "dev": "tsx watch ./src/main.ts",
+    "fix": "run-z fix:prettier fix:eslint",
+    "fix:eslint": "eslint . -c eslint.config.mjs --fix",
+    "fix:prettier": "prettier --write src",
+    "lint": "run-z lint:prettier,lint:eslint,lint:tsc",
+    "lint:eslint": "eslint . -c eslint.config.mjs",
+    "lint:prettier": "prettier --check src",
+    "lint:tsc": "tsc",
+    "preinstall": "npx only-allow pnpm",
+    "start": "tsx ./src/main.ts"
+  }
+}

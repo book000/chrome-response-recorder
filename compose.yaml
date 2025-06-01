@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - 8080:8080
+    volumes:
+      - ./userdata:/userdata
+      - ./responses:/responses
+      - ./downloads:/root/Downloads
+      - ./extension:/extension:ro
+    environment:
+      TARGET_URL_REGEXS: |-
+        https://.*twitter.com/.*
+        https://.*x.com/.*
+      VNC_SCREEN_SIZE: 600x1440
