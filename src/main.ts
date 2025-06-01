@@ -14,6 +14,8 @@ const ENVIRONMENT = {
       )
     : [],
   STARTUP_URLS: process.env.STARTUP_URLS ?? '',
+  RESTART_INTERVAL_SECONDS:
+    Number.parseInt(process.env.RESTART_INTERVAL_SECONDS ?? '0', 10) || 0,
 } as const
 
 function registerResponseListener(page: Page) {
@@ -127,9 +129,28 @@ async function main() {
     enableExtensions: true,
   })
 
+  // 定期的なブラウザの再起動
+  if (ENVIRONMENT.RESTART_INTERVAL_SECONDS > 0) {
+    setInterval(() => {
+      console.log(
+        `Restarting browser after ${ENVIRONMENT.RESTART_INTERVAL_SECONDS} seconds...`
+      )
+      browser
+        .close()
+        .then(() => {
+          console.log('Browser closed successfully.')
+        })
+        .catch((error: unknown) => {
+          console.error('Error closing browser:', error)
+        })
+    }, ENVIRONMENT.RESTART_INTERVAL_SECONDS * 1000)
+  }
+
   // 最初に存在するタブに対してリスナーを登録
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${initialPage.url()}`)
+  const client = await initialPage.createCDPSession()
+  await client.send('Emulation.clearDeviceMetricsOverride')
   registerResponseListener(initialPage)
 
   // 新しいタブが開いたら、page.onでリスナーを追加
@@ -146,6 +167,17 @@ async function main() {
         }
 
         console.log(`New page opened: ${page.url()}`)
+        page
+          .createCDPSession()
+          .then((client) => client.send('Emulation.clearDeviceMetricsOverride'))
+          .then(() => {
+            console.log(
+              `Cleared device metrics override for new page: ${page.url()}`
+            )
+          })
+          .catch((error: unknown) => {
+            console.error('Error clearing device metrics override:', error)
+          })
         registerResponseListener(page)
       })
       .catch((error: unknown) => {
