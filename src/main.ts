@@ -116,6 +116,12 @@ async function main() {
     '--disable-session-crashed-bubble',
     '--disable-infobars',
     '--auto-open-devtools-for-tabs',
+    '--disable-background-networking',
+    '--disable-default-apps',
+    '--disable-sync',
+    '--single-process',
+    '--disk-cache-size=1',
+    '--disable-features=AudioServiceOutOfProcess'
   ]
 
   const userDataDirectory = ENVIRONMENT.USER_DATA_DIR
