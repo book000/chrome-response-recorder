@@ -123,10 +123,6 @@ async function main() {
     executablePath,
     channel: 'chrome',
     args: puppeteerArguments,
-    defaultViewport: {
-      width,
-      height,
-    },
     userDataDir: userDataDirectory,
     enableExtensions: true,
   })
