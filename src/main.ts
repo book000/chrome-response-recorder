@@ -13,6 +13,7 @@ const ENVIRONMENT = {
         (regex) => new RegExp(regex.trim())
       )
     : [],
+  STARTUP_URLS: process.env.STARTUP_URLS ?? '',
 } as const
 
 function registerResponseListener(page: Page) {
@@ -155,6 +156,30 @@ async function main() {
         console.error('Error getting page:', error)
       })
   })
+
+  // 初期URLを開く。2つ以上のURLが指定されている場合は、タブを新規に開いてアクセス
+  // 1つ目のURLは最初のタブで開く
+  const startupUrls = ENVIRONMENT.STARTUP_URLS.split(',').map((url) =>
+    url.trim()
+  )
+  if (startupUrls.length > 0) {
+    const firstUrl = startupUrls[0]
+    console.log(`Opening initial URL: ${firstUrl}`)
+    await initialPage.goto(firstUrl, {
+      waitUntil: 'networkidle2',
+      timeout: 30_000,
+    })
+  }
+  // 残りのURLは新しいタブで開く
+  for (const url of startupUrls.slice(1)) {
+    console.log(`Opening additional URL in new tab: ${url}`)
+    const newPage = await browser.newPage()
+    registerResponseListener(newPage)
+    await newPage.goto(url, {
+      waitUntil: 'networkidle2',
+      timeout: 30_000,
+    })
+  }
 }
 
 ;(async () => {

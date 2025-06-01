@@ -9,6 +9,7 @@ services:
       - ./downloads:/root/Downloads
       - ./extension:/extension:ro
     environment:
+      STARTUP_URLS: https://x.com
       TARGET_URL_REGEXS: |-
         https://.*twitter.com/.*
         https://.*x.com/.*
