@@ -34,7 +34,9 @@ function registerResponseListener(page: Page) {
       return
     }
 
-    console.log(`Response received: ${method} ${url} - Status: ${status} ${statusText}`)
+    console.log(
+      `Response received: ${method} ${url} - Status: ${status} ${statusText}`
+    )
 
     // ファイルに保存する
     // /responses/{domain}/{path}/{timestamp}.json

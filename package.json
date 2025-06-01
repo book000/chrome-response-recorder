@@ -7,12 +7,11 @@
     "url": "https://github.com/book000/chrome-response-recorder/issues"
   },
   "dependencies": {
-    "tsx": "4.19.4",
-    "puppeteer-core": "24.9.0"
+    "puppeteer-core": "24.9.0",
+    "tsx": "4.19.4"
   },
   "devDependencies": {
     "@book000/eslint-config": "1.8.77",
-    "@book000/node-utils": "1.16.9",
     "@types/node": "22.15.29",
     "eslint": "9.28.0",
     "eslint-config-standard": "17.1.0",
