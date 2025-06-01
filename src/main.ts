@@ -121,7 +121,7 @@ async function main() {
     '--disable-sync',
     '--single-process',
     '--disk-cache-size=1',
-    '--disable-features=AudioServiceOutOfProcess'
+    '--disable-features=AudioServiceOutOfProcess',
   ]
 
   const userDataDirectory = ENVIRONMENT.USER_DATA_DIR
