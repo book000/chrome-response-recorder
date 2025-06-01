@@ -130,6 +130,13 @@ async function main() {
 
   const userDataDirectory = ENVIRONMENT.USER_DATA_DIR
 
+  const viewportWidth = process.env.VIEWPORT_WIDTH
+    ? Number(process.env.VIEWPORT_WIDTH)
+    : width
+  const viewportHeight = process.env.VIEWPORT_HEIGHT
+    ? Number(process.env.VIEWPORT_HEIGHT)
+    : height
+
   const browser = await puppeteer.launch({
     headless: false,
     executablePath,
@@ -137,6 +144,10 @@ async function main() {
     args: puppeteerArguments,
     userDataDir: userDataDirectory,
     enableExtensions: true,
+    defaultViewport: {
+      width: viewportWidth,
+      height: viewportHeight,
+    },
   })
 
   // 定期的なブラウザの再起動
@@ -161,8 +172,6 @@ async function main() {
   // 最初に存在するタブに対してリスナーを登録
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${initialPage.url()}`)
-  const client = await initialPage.createCDPSession()
-  await client.send('Emulation.clearDeviceMetricsOverride')
   registerResponseListener(initialPage)
 
   // 新しいタブが開いたら、page.onでリスナーを追加
@@ -179,17 +188,6 @@ async function main() {
         }
 
         console.log(`New page opened: ${page.url()}`)
-        page
-          .createCDPSession()
-          .then((client) => client.send('Emulation.clearDeviceMetricsOverride'))
-          .then(() => {
-            console.log(
-              `Cleared device metrics override for new page: ${page.url()}`
-            )
-          })
-          .catch((error: unknown) => {
-            console.error('Error clearing device metrics override:', error)
-          })
         registerResponseListener(page)
       })
       .catch((error: unknown) => {
