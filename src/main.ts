@@ -115,7 +115,6 @@ async function main() {
     `--window-size=${width},${height}`,
     '--disable-session-crashed-bubble',
     '--disable-infobars',
-    '--auto-open-devtools-for-tabs',
     '--disable-background-networking',
     '--disable-default-apps',
     '--disable-sync',
@@ -123,6 +122,11 @@ async function main() {
     '--disk-cache-size=1',
     '--disable-features=AudioServiceOutOfProcess',
   ]
+
+  const isOpenDevTools = process.env.OPEN_DEVTOOLS === 'true'
+  if (isOpenDevTools) {
+    puppeteerArguments.push('--auto-open-devtools-for-tabs')
+  }
 
   const userDataDirectory = ENVIRONMENT.USER_DATA_DIR
 
