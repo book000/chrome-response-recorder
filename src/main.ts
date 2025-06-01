@@ -139,6 +139,8 @@ async function main() {
         .close()
         .then(() => {
           console.log('Browser closed successfully.')
+          // eslint-disable-next-line unicorn/no-process-exit
+          process.exit(0) // プロセスを終了して再起動をトリガー
         })
         .catch((error: unknown) => {
           console.error('Error closing browser:', error)
