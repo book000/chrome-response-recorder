@@ -6,6 +6,7 @@ import puppeteer, {
   Browser,
 } from 'puppeteer-core'
 import fs from 'node:fs'
+import path from 'node:path'
 
 /**
  * 環境変数から取得する設定値
@@ -391,6 +392,7 @@ async function main() {
     '--disable-default-apps',
     '--disable-sync',
     '--disk-cache-size=1',
+    '--force-dark-mode',
   ]
 
   // 開発ツールの自動オープン設定
