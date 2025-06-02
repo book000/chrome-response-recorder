@@ -322,7 +322,7 @@ function createDisconnectedHandler(
  * Chrome の Preferences ファイルにある exit_type を設定する関数
  */
 function setPreferenceExitType() {
-  const preferencesPath = `${ENVIRONMENT.USER_DATA_DIR}/Default/Preferences`
+  const preferencesPath = path.join(ENVIRONMENT.USER_DATA_DIR, 'Default', 'Preferences')
   if (!fs.existsSync(preferencesPath)) {
     console.warn(`Preferences file not found: ${preferencesPath}`)
     return
