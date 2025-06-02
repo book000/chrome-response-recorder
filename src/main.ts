@@ -375,9 +375,6 @@ async function main() {
 
     // メモリ最適化設定
     '--disable-dev-shm-usage',
-    '--disable-site-isolation-trials',
-    '--single-process',
-    '--disable-renderer-backgrounding',
     '--disable-breakpad',
     '--disable-backing-store-limit',
 
@@ -396,10 +393,8 @@ async function main() {
     '--disable-session-crashed-bubble',
     '--hide-crash-restore-bubble',
     '--disable-infobars',
-    '--disable-background-networking',
     '--disable-default-apps',
     '--disable-sync',
-    '--disk-cache-size=1',
     '--force-dark-mode',
   ]
 
