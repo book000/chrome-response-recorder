@@ -196,11 +196,11 @@ async function main() {
   })
 
   // ブラウザが切断された場合は、プロセスを終了して再起動をトリガーする
-  browser.on("disconnected", () => {
-    console.log("Browser disconnected. Exiting process...");
+  browser.on('disconnected', () => {
+    console.log('Browser disconnected. Exiting process...')
     // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(0); // プロセスを終了して再起動をトリガー
-  });
+    process.exit(0) // プロセスを終了して再起動をトリガー
+  })
 
   // 初期URLを開く。2つ以上のURLが指定されている場合は、タブを新規に開いてアクセス
   // 1つ目のURLは最初のタブで開く
