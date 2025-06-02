@@ -319,6 +319,29 @@ function createDisconnectedHandler(
 }
 
 /**
+ * Chrome の Preferences ファイルにある exit_type を設定する関数
+ */
+function setPreferenceExitType() {
+  const preferencesPath = `${ENVIRONMENT.USER_DATA_DIR}/Default/Preferences`
+  if (!fs.existsSync(preferencesPath)) {
+    console.warn(`Preferences file not found: ${preferencesPath}`)
+    return
+  }
+
+  try {
+    const preferences: {
+      exit_type: string
+      [key: string]: any // その他のプロパティを許容
+    } = JSON.parse(fs.readFileSync(preferencesPath, 'utf8'))
+    preferences.exit_type = 'normal'
+    fs.writeFileSync(preferencesPath, JSON.stringify(preferences, null, 2), 'utf8')
+    console.log('Set exit_type to "normal" in Preferences file.')
+  } catch (error) {
+    console.error('Error setting exit_type in Preferences:', error)
+  }
+}
+
+/**
  * メイン処理
  * Puppeteerを使用してブラウザを起動し、レスポンス監視を開始する
  */
@@ -362,6 +385,7 @@ async function main() {
     '--lang=ja',
     `--window-size=${width},${height}`,
     '--disable-session-crashed-bubble',
+    '--hide-crash-restore-bubble',
     '--disable-infobars',
     '--disable-background-networking',
     '--disable-default-apps',
@@ -380,6 +404,12 @@ async function main() {
   // ビューポートサイズの設定（環境変数で上書き可能）
   const viewportWidth = ENVIRONMENT.VIEWPORT_WIDTH ?? width
   const viewportHeight = ENVIRONMENT.VIEWPORT_HEIGHT ?? height
+  console.log(`Viewport size: ${viewportWidth}x${viewportHeight}`)
+
+  // ユーザーデータディレクトリの存在確認と作成
+  if (fs.existsSync(userDataDirectory)) {
+    setPreferenceExitType()
+  }
 
   // Puppeteerブラウザインスタンスの起動
   const browser = await puppeteer.launch({
