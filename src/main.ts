@@ -323,7 +323,11 @@ function createDisconnectedHandler(
  * Chrome の Preferences ファイルにある exit_type を設定する関数
  */
 function setPreferenceExitType() {
-  const preferencesPath = path.join(ENVIRONMENT.USER_DATA_DIR, 'Default', 'Preferences')
+  const preferencesPath = path.join(
+    ENVIRONMENT.USER_DATA_DIR,
+    'Default',
+    'Preferences'
+  )
   if (!fs.existsSync(preferencesPath)) {
     console.warn(`Preferences file not found: ${preferencesPath}`)
     return
@@ -335,7 +339,11 @@ function setPreferenceExitType() {
       [key: string]: any // その他のプロパティを許容
     } = JSON.parse(fs.readFileSync(preferencesPath, 'utf8'))
     preferences.exit_type = 'normal'
-    fs.writeFileSync(preferencesPath, JSON.stringify(preferences, null, 2), 'utf8')
+    fs.writeFileSync(
+      preferencesPath,
+      JSON.stringify(preferences, null, 2),
+      'utf8'
+    )
     console.log('Set exit_type to "normal" in Preferences file.')
   } catch (error) {
     console.error('Error setting exit_type in Preferences:', error)
