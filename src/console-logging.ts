@@ -28,26 +28,23 @@ export class ConsoleLogging {
   }
 
   private async registerHandlers() {
-    this.page.on('console', this.consoleHandler.bind(this))
-    this.page.on('pageerror', this.errorHandler.bind(this))
-    this.page.on('requestfailed', this.requestFailedHandler.bind(this))
+    const consoleHandlerFunc = this.consoleHandler.bind(this)
+    const errorHandlerFunc = this.errorHandler.bind(this)
+    const requestFailedHandlerFunc = this.requestFailedHandler.bind(this)
+    const consoleApiCalledHandlerFunc = this.consoleApiCalledHandler.bind(this)
+
+    this.page.on('console', consoleHandlerFunc)
+    this.page.on('pageerror', errorHandlerFunc)
+    this.page.on('requestfailed', requestFailedHandlerFunc)
     const client = await this.page.createCDPSession()
     await client.send('Runtime.enable')
-    client.on(
-      'Runtime.consoleAPICalled',
-      this.consoleApiCalledHandler.bind(this)
-    )
+    client.on('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
 
     this.listeners.push(
-      () => this.page.off('console', this.consoleHandler.bind(this)),
-      () => this.page.off('pageerror', this.errorHandler.bind(this)),
-      () =>
-        this.page.off('requestfailed', this.requestFailedHandler.bind(this)),
-      () =>
-        client.off(
-          'Runtime.consoleAPICalled',
-          this.consoleApiCalledHandler.bind(this)
-        )
+      () => this.page.off('console', consoleHandlerFunc),
+      () => this.page.off('pageerror', errorHandlerFunc),
+      () => this.page.off('requestfailed', requestFailedHandlerFunc),
+      () => client.off('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
     )
   }
 
