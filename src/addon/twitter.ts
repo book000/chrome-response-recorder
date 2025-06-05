@@ -17,7 +17,12 @@ interface TwitterAddonOptions {
 /**
  * Twitterでの操作に失敗した場合
  */
-export class TwitterOperationError extends Error {}
+export class TwitterOperationError extends Error {
+  constructor(message?: string) {
+    super(message)
+    this.name = 'TwitterOperationError'
+  }
+}
 
 export class TwitterAddon implements BaseAddon {
   readonly name = 'Twitter'
