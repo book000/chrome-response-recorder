@@ -61,7 +61,8 @@ export class TwitterAddon implements BaseAddon {
 
   private async login(page: Page) {
     const pageUrl = new URL(page.url())
-    if (!this.loginUrls.includes(pageUrl.href)) {
+    if (!this.loginUrls.includes(pageUrl.origin + pageUrl.pathname)) {
+      // ログインページではない場合は何もしない
       return
     }
 
