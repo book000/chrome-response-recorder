@@ -14,3 +14,6 @@ services:
         https://.*twitter.com/.*
         https://.*x.com/.*
       VNC_SCREEN_SIZE: 600x1440
+      ACTIVE_ADDONS: Twitter
+    env_file:
+      - .env

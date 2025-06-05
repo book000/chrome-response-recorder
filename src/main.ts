@@ -7,6 +7,8 @@ import puppeteer, {
 } from 'puppeteer-core'
 import fs from 'node:fs'
 import path from 'node:path'
+import { BaseAddon } from './addon'
+import { TwitterAddon } from './addon/twitter'
 
 /**
  * 環境変数から取得する設定値
@@ -42,6 +44,20 @@ const ENVIRONMENT = {
   VIEWPORT_HEIGHT: process.env.VIEWPORT_HEIGHT
     ? Number(process.env.VIEWPORT_HEIGHT)
     : null,
+  /** 有効なアドオンのリスト */
+  ACTIVE_ADDONS: process.env.ACTIVE_ADDONS
+    ? process.env.ACTIVE_ADDONS.split(',').map((addon) => addon.trim())
+    : [],
+  /** Twitterのユーザー名 */
+  twitterUsername: process.env.TWITTER_USERNAME,
+  /** Twitterのパスワード */
+  twitterPassword: process.env.TWITTER_PASSWORD,
+  /** Twitterのメールアドレス */
+  twitterEmailAddress: process.env.TWITTER_EMAIL_ADDRESS,
+  /** TwitterのOTPシークレット */
+  twitterOtpSecret: process.env.TWITTER_OTP_SECRET,
+  /** 開発ツールを自動で開くかどうか */
+  isOpenDevTools: process.env.OPEN_DEVTOOLS === 'true',
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
@@ -201,7 +217,26 @@ function registerResponseListener(page: Page) {
     page.off('response', responseHandler)
     page.off('close', closeHandler)
   })
-  pageEventListeners.set(page, cleanupFunctions)
+  pageEventListeners.set(page, [
+    ...(pageEventListeners.get(page) ?? []),
+    ...cleanupFunctions,
+  ])
+}
+
+async function registerAddons(addons: BaseAddon[], page: Page) {
+  for (const addon of addons) {
+    try {
+      console.log(`Registering addon: ${addon.name}`)
+      await addon.register(page)
+      console.log(`Addon ${addon.name} registered successfully.`)
+      pageEventListeners.set(page, [
+        ...(pageEventListeners.get(page) ?? []),
+        () => addon.unregister(page),
+      ])
+    } catch (error) {
+      console.error(`Error registering addon ${addon.name}:`, error)
+    }
+  }
 }
 
 /**
@@ -269,7 +304,7 @@ async function gracefulShutdown(
  * 新しいターゲット（タブ）が作成された時のハンドラーを生成
  * @returns ターゲット作成イベントハンドラー
  */
-function createTargetCreatedHandler() {
+function createTargetCreatedHandler(addons: BaseAddon[]) {
   return (target: Target) => {
     console.log(`New target created: ${target.url()}`)
     // ページタイプのターゲットのみ処理
@@ -286,6 +321,14 @@ function createTargetCreatedHandler() {
         console.log(`New page opened: ${page.url()}`)
         // 新しいページにレスポンス監視リスナーを登録
         registerResponseListener(page)
+        // アドオンを登録
+        registerAddons(addons, page)
+          .then(() => {
+            console.log(`Addons registered for page: ${page.url()}`)
+          })
+          .catch((error: unknown) => {
+            console.error('Error registering addons:', error)
+          })
       })
       .catch((error: unknown) => {
         console.error('Error getting page:', error)
@@ -399,7 +442,7 @@ async function main() {
   ]
 
   // 開発ツールの自動オープン設定
-  const isOpenDevTools = process.env.OPEN_DEVTOOLS === 'true'
+  const isOpenDevTools = ENVIRONMENT.isOpenDevTools
   if (isOpenDevTools) {
     puppeteerArguments.push('--auto-open-devtools-for-tabs')
   }
@@ -429,6 +472,21 @@ async function main() {
       height: viewportHeight,
     },
   })
+
+  // 有効アドオンのリスト
+  const addons: BaseAddon[] = [
+    new TwitterAddon({
+      username: ENVIRONMENT.twitterUsername,
+      password: ENVIRONMENT.twitterPassword,
+      emailAddress: ENVIRONMENT.twitterEmailAddress,
+      otpSecret: ENVIRONMENT.twitterOtpSecret,
+    }),
+  ]
+  const activeAddons: BaseAddon[] = addons.filter((addon) =>
+    ENVIRONMENT.ACTIVE_ADDONS.map((name) =>
+      name.trim().toLocaleLowerCase()
+    ).includes(addon.name.toLocaleLowerCase())
+  )
 
   // リソースのクリーンアップを管理する
   let restartIntervalId: NodeJS.Timeout | null = null
@@ -480,9 +538,11 @@ async function main() {
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${initialPage.url()}`)
   registerResponseListener(initialPage)
+  // 初期ページに対してアドオンを登録
+  await registerAddons(activeAddons, initialPage)
 
   // 新しいタブが開いた際のイベントリスナー設定
-  const targetCreatedHandler = createTargetCreatedHandler()
+  const targetCreatedHandler = createTargetCreatedHandler(activeAddons)
 
   browser.on('targetcreated', targetCreatedHandler)
   browserEventListeners.push(() => {
@@ -527,6 +587,7 @@ async function main() {
     try {
       const newPage = await browser.newPage()
       registerResponseListener(newPage)
+      await registerAddons(activeAddons, newPage)
       await newPage.goto(url, {
         waitUntil: 'networkidle2',
         timeout: 30_000,
