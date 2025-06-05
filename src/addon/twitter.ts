@@ -94,6 +94,9 @@ export class TwitterAddon implements BaseAddon {
     if (!username) {
       throw new TwitterOperationError('Username required.')
     }
+    await usernameInput.click({ clickCount: 3 })
+    await usernameInput.press('Backspace')
+    await usernameInput.focus()
     await usernameInput.type(username, { delay: 100 })
 
     const nextButton = await this.getElement(
@@ -119,6 +122,9 @@ export class TwitterAddon implements BaseAddon {
     if (!password) {
       throw new TwitterOperationError('Password required.')
     }
+    await passwordInput.click({ clickCount: 3 })
+    await passwordInput.press('Backspace')
+    await passwordInput.focus()
     await passwordInput.type(password, { delay: 100 })
 
     const loginButton = await this.getElement(
@@ -148,6 +154,9 @@ export class TwitterAddon implements BaseAddon {
       throw new TwitterOperationError('OTP secret required.')
     }
     const authCode = authenticator.generate(otpSecret)
+    await authCodeInput.click({ clickCount: 3 })
+    await authCodeInput.press('Backspace')
+    await authCodeInput.focus()
     await authCodeInput.type(authCode, { delay: 100 })
 
     const nextButton = await this.getElement(
@@ -178,6 +187,9 @@ export class TwitterAddon implements BaseAddon {
       throw new TwitterOperationError('Email address required.')
     }
 
+    await emailInput.click({ clickCount: 3 })
+    await emailInput.press('Backspace')
+    await emailInput.focus()
     await emailInput.type(emailAddress, { delay: 100 })
 
     const nextButton = await this.getElement(
