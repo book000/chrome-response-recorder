@@ -217,10 +217,7 @@ function registerResponseListener(page: Page) {
     page.off('response', responseHandler)
     page.off('close', closeHandler)
   })
-  pageEventListeners.set(page, [
-    ...(pageEventListeners.get(page) ?? []),
-    ...cleanupFunctions,
-  ])
+  pageEventListeners.set(page, cleanupFunctions)
 }
 
 async function registerAddons(addons: BaseAddon[], page: Page) {
