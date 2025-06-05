@@ -9,6 +9,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { BaseAddon } from './addon'
 import { TwitterAddon } from './addon/twitter'
+import { ConsoleLogging } from './console-logging'
 
 /**
  * 環境変数から取得する設定値
@@ -49,15 +50,17 @@ const ENVIRONMENT = {
     ? process.env.ACTIVE_ADDONS.split(',').map((addon) => addon.trim())
     : [],
   /** Twitterのユーザー名 */
-  twitterUsername: process.env.TWITTER_USERNAME,
+  TWITTER_USERNAME: process.env.TWITTER_USERNAME,
   /** Twitterのパスワード */
-  twitterPassword: process.env.TWITTER_PASSWORD,
+  TWITTER_PASSWORD: process.env.TWITTER_PASSWORD,
   /** Twitterのメールアドレス */
-  twitterEmailAddress: process.env.TWITTER_EMAIL_ADDRESS,
+  TWITTER_EMAIL_ADDRESS: process.env.TWITTER_EMAIL_ADDRESS,
   /** TwitterのOTPシークレット */
-  twitterOtpSecret: process.env.TWITTER_OTP_SECRET,
+  TWITTER_OTP_SECRET: process.env.TWITTER_OTP_SECRET,
   /** 開発ツールを自動で開くかどうか */
-  isOpenDevTools: process.env.OPEN_DEVTOOLS === 'true',
+  IS_OPEN_DEV_TOOLS: process.env.OPEN_DEVTOOLS === 'true',
+  /** コンソールログの出力ディレクトリ */
+  CONSOLE_LOG_DIR: process.env.CONSOLE_LOG_DIR,
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
@@ -223,6 +226,12 @@ function registerResponseListener(page: Page) {
   ])
 }
 
+/**
+ * アドオンをページに登録する
+ *
+ * @param addons - 登録するアドオンの配列
+ * @param page - 対象のページオブジェクト
+ */
 async function registerAddons(addons: BaseAddon[], page: Page) {
   for (const addon of addons) {
     try {
@@ -321,6 +330,23 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
         console.log(`New page opened: ${page.url()}`)
         // 新しいページにレスポンス監視リスナーを登録
         registerResponseListener(page)
+        // コンソールロギングのハンドラーを登録
+        const consoleLogging = new ConsoleLogging(
+          page,
+          ENVIRONMENT.CONSOLE_LOG_DIR
+        )
+        consoleLogging
+          .start()
+          .then(() => {
+            console.log(`Console logging started for page: ${page.url()}`)
+            pageEventListeners.set(page, [
+              ...(pageEventListeners.get(page) ?? []),
+              ...consoleLogging.getListeners(),
+            ])
+          })
+          .catch((error: unknown) => {
+            console.error('Error starting console logging:', error)
+          })
         // アドオンを登録
         registerAddons(addons, page)
           .then(() => {
@@ -442,7 +468,7 @@ async function main() {
   ]
 
   // 開発ツールの自動オープン設定
-  const isOpenDevTools = ENVIRONMENT.isOpenDevTools
+  const isOpenDevTools = ENVIRONMENT.IS_OPEN_DEV_TOOLS
   if (isOpenDevTools) {
     puppeteerArguments.push('--auto-open-devtools-for-tabs')
   }
@@ -476,10 +502,10 @@ async function main() {
   // 有効アドオンのリスト
   const addons: BaseAddon[] = [
     new TwitterAddon({
-      username: ENVIRONMENT.twitterUsername,
-      password: ENVIRONMENT.twitterPassword,
-      emailAddress: ENVIRONMENT.twitterEmailAddress,
-      otpSecret: ENVIRONMENT.twitterOtpSecret,
+      username: ENVIRONMENT.TWITTER_USERNAME,
+      password: ENVIRONMENT.TWITTER_PASSWORD,
+      emailAddress: ENVIRONMENT.TWITTER_EMAIL_ADDRESS,
+      otpSecret: ENVIRONMENT.TWITTER_OTP_SECRET,
     }),
   ]
   const activeAddons: BaseAddon[] = addons.filter((addon) =>
@@ -538,6 +564,23 @@ async function main() {
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${initialPage.url()}`)
   registerResponseListener(initialPage)
+  // コンソールロギングのハンドラーを登録
+  const consoleLogging = new ConsoleLogging(
+    initialPage,
+    ENVIRONMENT.CONSOLE_LOG_DIR
+  )
+  consoleLogging
+    .start()
+    .then(() => {
+      console.log(`Console logging started for page: ${initialPage.url()}`)
+      pageEventListeners.set(initialPage, [
+        ...(pageEventListeners.get(initialPage) ?? []),
+        ...consoleLogging.getListeners(),
+      ])
+    })
+    .catch((error: unknown) => {
+      console.error('Error starting console logging:', error)
+    })
   // 初期ページに対してアドオンを登録
   await registerAddons(activeAddons, initialPage)
 
@@ -587,6 +630,23 @@ async function main() {
     try {
       const newPage = await browser.newPage()
       registerResponseListener(newPage)
+      // コンソールロギングのハンドラーを登録
+      const consoleLogging = new ConsoleLogging(
+        newPage,
+        ENVIRONMENT.CONSOLE_LOG_DIR
+      )
+      consoleLogging
+        .start()
+        .then(() => {
+          console.log(`Console logging started for page: ${newPage.url()}`)
+          pageEventListeners.set(newPage, [
+            ...(pageEventListeners.get(newPage) ?? []),
+            ...consoleLogging.getListeners(),
+          ])
+        })
+        .catch((error: unknown) => {
+          console.error('Error starting console logging:', error)
+        })
       await registerAddons(activeAddons, newPage)
       await newPage.goto(url, {
         waitUntil: 'networkidle2',
