@@ -56,6 +56,8 @@ const ENVIRONMENT = {
   twitterEmailAddress: process.env.TWITTER_EMAIL_ADDRESS,
   /** TwitterのOTPシークレット */
   twitterOtpSecret: process.env.TWITTER_OTP_SECRET,
+  /** 開発ツールを自動で開くかどうか */
+  isOpenDevTools: process.env.OPEN_DEVTOOLS === 'true',
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
@@ -440,7 +442,7 @@ async function main() {
   ]
 
   // 開発ツールの自動オープン設定
-  const isOpenDevTools = process.env.OPEN_DEVTOOLS === 'true'
+  const isOpenDevTools = ENVIRONMENT.isOpenDevTools
   if (isOpenDevTools) {
     puppeteerArguments.push('--auto-open-devtools-for-tabs')
   }
