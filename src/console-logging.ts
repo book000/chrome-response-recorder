@@ -5,6 +5,7 @@ import { dirname } from 'node:path'
 
 export class ConsoleLogging {
   private page: Page
+  private timestamp: number = Date.now()
   private logDirectory: string | undefined
   private listeners: (() => void)[] = []
 
@@ -130,8 +131,7 @@ export class ConsoleLogging {
     const browsingDomain = pageUrl.hostname
     const pathname = pageUrl.pathname.replace(/^\//, '') // パスの先頭のスラッシュを削除
     const path = pathname || '__root__' // パスが空の場合は '__root__' とする
-    const timestamp = Date.now()
-    const logFilePath = `${this.logDirectory}/${browsingDomain}/${path}/${timestamp}.jsonl`
+    const logFilePath = `${this.logDirectory}/${browsingDomain}/${path}/${this.timestamp}.jsonl`
     const logFileDirectory = dirname(logFilePath)
     const logEntry = JSON.stringify(log) + '\n'
 
