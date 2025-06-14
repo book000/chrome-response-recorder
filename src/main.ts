@@ -8,8 +8,9 @@ import puppeteer, {
 import fs from 'node:fs'
 import path from 'node:path'
 import { BaseAddon } from './addon'
-import { TwitterAddon } from './addon/twitter'
+import { TwitterLoginAddon } from './addon/twitter-login'
 import { ConsoleLogging } from './console-logging'
+import { TwitterCookieAddon } from './addon/twitter-cookie'
 
 /**
  * 環境変数から取得する設定値
@@ -57,6 +58,8 @@ const ENVIRONMENT = {
   TWITTER_EMAIL_ADDRESS: process.env.TWITTER_EMAIL_ADDRESS,
   /** TwitterのOTPシークレット */
   TWITTER_OTP_SECRET: process.env.TWITTER_OTP_SECRET,
+  /** TwitterのCookieファイルパス */
+  TWITTER_COOKIE_FILE_PATH: process.env.TWITTER_COOKIE_FILE_PATH,
   /** 開発ツールを自動で開くかどうか */
   IS_OPEN_DEV_TOOLS: process.env.OPEN_DEVTOOLS === 'true',
   /** コンソールログの出力ディレクトリ */
@@ -501,12 +504,13 @@ async function main() {
 
   // 有効アドオンのリスト
   const addons: BaseAddon[] = [
-    new TwitterAddon({
+    new TwitterLoginAddon({
       username: ENVIRONMENT.TWITTER_USERNAME,
       password: ENVIRONMENT.TWITTER_PASSWORD,
       emailAddress: ENVIRONMENT.TWITTER_EMAIL_ADDRESS,
       otpSecret: ENVIRONMENT.TWITTER_OTP_SECRET,
     }),
+    new TwitterCookieAddon(ENVIRONMENT.TWITTER_COOKIE_FILE_PATH),
   ]
   const activeAddons: BaseAddon[] = addons.filter((addon) =>
     ENVIRONMENT.ACTIVE_ADDONS.map((name) =>
