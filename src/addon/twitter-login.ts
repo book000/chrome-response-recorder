@@ -3,7 +3,7 @@ import { BaseAddon } from '.'
 import { setInterval } from 'node:timers/promises'
 import { authenticator } from 'otplib'
 
-interface TwitterAddonOptions {
+interface TwitterLoginAddonOptions {
   /** Twitterのユーザー名 */
   username?: string
   /** Twitterのパスワード */
@@ -15,29 +15,29 @@ interface TwitterAddonOptions {
 }
 
 /**
- * Twitterでの操作に失敗した場合
+ * Twitterでのログイン操作に失敗した場合
  */
-export class TwitterOperationError extends Error {
+export class TwitterLoginOperationError extends Error {
   constructor(message?: string) {
     super(message)
     this.name = 'TwitterOperationError'
   }
 }
 
-export class TwitterAddon implements BaseAddon {
-  readonly name = 'Twitter'
+export class TwitterLoginAddon implements BaseAddon {
+  readonly name = 'TwitterLogin'
   readonly description = 'Automatically login to Twitter.'
 
   private loginUrls = ['https://x.com/i/flow/login']
   private controller = new AbortController()
-  private options: TwitterAddonOptions
-  constructor(options: TwitterAddonOptions) {
+  private options: TwitterLoginAddonOptions
+  constructor(options: TwitterLoginAddonOptions) {
     this.options = options
   }
 
   register(page: Page): void {
     this.checkerPageChanged(page).catch((error: unknown) => {
-      if (error instanceof TwitterOperationError) {
+      if (error instanceof TwitterLoginOperationError) {
         console.error(`Twitter operation error: ${error.message}`)
       } else {
         console.error('An unexpected error occurred:', error)
@@ -93,7 +93,7 @@ export class TwitterAddon implements BaseAddon {
       return
     }
     if (!username) {
-      throw new TwitterOperationError('Username required.')
+      throw new TwitterLoginOperationError('Username required.')
     }
     await usernameInput.click({ clickCount: 3 })
     await usernameInput.press('Backspace')
@@ -106,7 +106,7 @@ export class TwitterAddon implements BaseAddon {
       3000
     )
     if (!nextButton) {
-      throw new TwitterOperationError('Next button not found.')
+      throw new TwitterLoginOperationError('Next button not found.')
     }
     await nextButton.click()
   }
@@ -121,7 +121,7 @@ export class TwitterAddon implements BaseAddon {
       return
     }
     if (!password) {
-      throw new TwitterOperationError('Password required.')
+      throw new TwitterLoginOperationError('Password required.')
     }
     await passwordInput.click({ clickCount: 3 })
     await passwordInput.press('Backspace')
@@ -134,7 +134,7 @@ export class TwitterAddon implements BaseAddon {
       3000
     )
     if (!loginButton) {
-      throw new TwitterOperationError('Login button not found.')
+      throw new TwitterLoginOperationError('Login button not found.')
     }
     await loginButton.click()
   }
@@ -152,7 +152,7 @@ export class TwitterAddon implements BaseAddon {
       return
     }
     if (!otpSecret) {
-      throw new TwitterOperationError('OTP secret required.')
+      throw new TwitterLoginOperationError('OTP secret required.')
     }
     const authCode = authenticator.generate(otpSecret)
     await authCodeInput.click({ clickCount: 3 })
@@ -166,7 +166,7 @@ export class TwitterAddon implements BaseAddon {
       3000
     )
     if (!nextButton) {
-      throw new TwitterOperationError('Auth code next button not found.')
+      throw new TwitterLoginOperationError('Auth code next button not found.')
     }
     await nextButton.click()
   }
@@ -185,7 +185,7 @@ export class TwitterAddon implements BaseAddon {
     }
 
     if (!emailAddress) {
-      throw new TwitterOperationError('Email address required.')
+      throw new TwitterLoginOperationError('Email address required.')
     }
 
     await emailInput.click({ clickCount: 3 })
@@ -199,7 +199,7 @@ export class TwitterAddon implements BaseAddon {
       3000
     )
     if (!nextButton) {
-      throw new TwitterOperationError('Email next button not found.')
+      throw new TwitterLoginOperationError('Email next button not found.')
     }
     await nextButton.click()
   }
