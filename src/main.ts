@@ -10,7 +10,7 @@ import path from 'node:path'
 import { BaseAddon } from './addon'
 import { TwitterLoginAddon } from './addon/twitter-login'
 import { ConsoleLogging } from './console-logging'
-import { TwitterCookieAddon } from './addon/twitter-cookie'
+import { ExportCookieAddon } from './addon/export-cookie'
 
 /**
  * 環境変数から取得する設定値
@@ -58,8 +58,8 @@ const ENVIRONMENT = {
   TWITTER_EMAIL_ADDRESS: process.env.TWITTER_EMAIL_ADDRESS,
   /** TwitterのOTPシークレット */
   TWITTER_OTP_SECRET: process.env.TWITTER_OTP_SECRET,
-  /** TwitterのCookieファイルパス */
-  TWITTER_COOKIE_FILE_PATH: process.env.TWITTER_COOKIE_FILE_PATH,
+  /** Cookieをエクスポートするファイルパス */
+  EXPORT_COOKIE_FILE_PATH: process.env.EXPORT_COOKIE_FILE_PATH,
   /** 開発ツールを自動で開くかどうか */
   IS_OPEN_DEV_TOOLS: process.env.OPEN_DEVTOOLS === 'true',
   /** コンソールログの出力ディレクトリ */
@@ -510,7 +510,7 @@ async function main() {
       emailAddress: ENVIRONMENT.TWITTER_EMAIL_ADDRESS,
       otpSecret: ENVIRONMENT.TWITTER_OTP_SECRET,
     }),
-    new TwitterCookieAddon(ENVIRONMENT.TWITTER_COOKIE_FILE_PATH),
+    new ExportCookieAddon(ENVIRONMENT.EXPORT_COOKIE_FILE_PATH),
   ]
   const activeAddons: BaseAddon[] = addons.filter((addon) =>
     ENVIRONMENT.ACTIVE_ADDONS.map((name) =>
