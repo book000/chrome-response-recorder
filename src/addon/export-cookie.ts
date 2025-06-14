@@ -3,23 +3,20 @@ import { BaseAddon } from '.'
 import path from 'node:path'
 import fs from 'node:fs'
 
-export class TwitterCookieAddon implements BaseAddon {
-  readonly name = 'TwitterCookie'
-  readonly description = 'Export twitter cookies.'
+export class ExportCookieAddon implements BaseAddon {
+  readonly name = 'ExportCookie'
+  readonly description = 'Exports cookies to file.'
 
   private cookieFilePath: string
 
   constructor(cookieFilePath: string | undefined) {
     if (!cookieFilePath) {
-      throw new Error('cookieFilePath is required for TwitterCookieAddon')
+      throw new Error('cookieFilePath is required for ExportCookieAddon')
     }
     this.cookieFilePath = cookieFilePath
   }
 
   async register(page: Page): Promise<void> {
-    if (!page.url().startsWith('https://x.com')) {
-      return
-    }
     const cookies = await page.browser().cookies()
     const cookieData = cookies.map((cookie) => ({
       name: cookie.name,
