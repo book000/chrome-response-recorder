@@ -456,6 +456,8 @@ async function main() {
     '--disable-notifications',
     '--mute-audio',
     '--use-gl=desktop',
+    '--use-gl=angle',
+    '--use-angle=gl-egl',
 
     // ブラウザの動作設定
     '--no-first-run',
