@@ -455,6 +455,7 @@ async function main() {
     '--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
     '--disable-notifications',
     '--mute-audio',
+    '--use-gl=desktop',
 
     // ブラウザの動作設定
     '--no-first-run',
