@@ -455,7 +455,6 @@ async function main() {
     '--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
     '--disable-notifications',
     '--mute-audio',
-    '--use-gl=desktop',
     '--use-gl=angle',
     '--use-angle=gl-egl',
 
