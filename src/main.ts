@@ -452,7 +452,6 @@ async function main() {
 
     // パフォーマンス設定
     '--disable-accelerated-2d-canvas',
-    '--disable-gpu',
     '--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
     '--disable-notifications',
     '--mute-audio',
