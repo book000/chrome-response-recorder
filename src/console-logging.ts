@@ -65,9 +65,12 @@ export class ConsoleLogging {
     })
   }
 
-  private errorHandler(error: Error) {
-    this.logMessage('pageerror', 'error', error.message, {
-      stack: error.stack ?? null,
+  private errorHandler(error: unknown) {
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
+
+    this.logMessage('pageerror', 'error', normalizedError.message, {
+      stack: normalizedError.stack ?? null,
     })
   }
 
@@ -91,10 +94,14 @@ export class ConsoleLogging {
     )
   }
 
-  private consoleApiCalledHandler(
-    event: Protocol.Runtime.ConsoleAPICalledEvent
-  ) {
-    const { type, args, stackTrace } = event
+  private consoleApiCalledHandler(event: unknown) {
+    if (!event || typeof event !== 'object') {
+      return
+    }
+
+    const runtimeEvent = event as Protocol.Runtime.ConsoleAPICalledEvent
+
+    const { type, args, stackTrace } = runtimeEvent
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const message = args.map((arg) => arg.value).join(' ')
     this.logMessage('consoleApiCalled', type, message, {

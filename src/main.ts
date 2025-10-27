@@ -74,7 +74,7 @@ const pageEventListeners = new WeakMap<Page, (() => void)[]>()
  * HTTPレスポンスを処理し、条件に合致するレスポンスをファイルシステムに保存する
  * @param response - Puppeteerから受信したHTTPResponse
  */
-function responseHandler(response: HTTPResponse) {
+async function responseHandler(response: HTTPResponse) {
   const url = response.url()
   const status = response.status()
   const statusText = response.statusText()
@@ -117,6 +117,8 @@ function responseHandler(response: HTTPResponse) {
   const dataFilePath = `${directory}data.raw`
 
   // レスポンスの詳細情報をまとめる
+  const postData = await response.request().fetchPostData()
+
   const responseData = {
     url,
     status,
@@ -126,7 +128,7 @@ function responseHandler(response: HTTPResponse) {
     request: {
       method,
       headers: response.request().headers(),
-      postData: response.request().postData(),
+      postData,
     },
   }
 
@@ -143,48 +145,69 @@ function responseHandler(response: HTTPResponse) {
   }
 
   // レスポンスボディのバイナリデータを data.raw に保存
-  response
-    .buffer()
-    .then((buffer) => {
+  try {
+    const buffer = await response.buffer()
+
+    await new Promise<void>((resolve, reject) => {
       const writeStream = fs.createWriteStream(dataFilePath)
-      let streamClosed = false
+      let isSettled = false
 
       // ストリームのクリーンアップ処理
-      const cleanup = () => {
-        if (!streamClosed) {
-          streamClosed = true
+      const cleanup = (error?: Error) => {
+        if (isSettled) {
+          return
+        }
+
+        isSettled = true
+
+        if (error) {
           writeStream.destroy()
+          reject(error)
+        } else {
+          resolve()
         }
       }
 
       // タイムアウトを設定してストリームの書き込みを制限（30秒）
       const timeout = setTimeout(() => {
         console.error(`Timeout writing response data: ${dataFilePath}`)
-        cleanup()
+        cleanup(new Error('Write stream timeout'))
       }, 30_000) // 30秒のタイムアウト
 
       writeStream.on('error', (error) => {
-        console.error('Error writing response data:', error)
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+        console.error('Error writing response data:', normalizedError)
         clearTimeout(timeout)
-        cleanup()
+        cleanup(normalizedError)
       })
 
       writeStream.on('finish', () => {
         console.log(`Response data saved to: ${dataFilePath}`)
         clearTimeout(timeout)
-        streamClosed = true
+        cleanup()
       })
 
       writeStream.on('close', () => {
         clearTimeout(timeout)
-        streamClosed = true
+        cleanup()
       })
 
       writeStream.end(buffer)
     })
-    .catch((error: unknown) => {
-      console.error('Error saving response data:', error)
+  } catch (error) {
+    console.error('Error saving response data:', error)
+  }
+}
+
+function createResponseListener() {
+  return (response: HTTPResponse) => {
+    responseHandler(response).catch((error: unknown) => {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error))
+      console.error('Unhandled error in response handler:', normalizedError)
     })
+  }
 }
 
 // ページクローズハンドラー
@@ -193,10 +216,13 @@ function responseHandler(response: HTTPResponse) {
  * @param page - 対象のページオブジェクト
  * @returns クリーンアップ処理を行う関数
  */
-function createCloseHandler(page: Page) {
+function createCloseHandler(
+  page: Page,
+  responseListener: (response: HTTPResponse) => void
+) {
   return function closeHandler() {
     // イベントリスナーを削除
-    page.off('response', responseHandler)
+    page.off('response', responseListener)
     page.off('close', closeHandler)
     // WeakMapから削除（ガベージコレクションを促進）
     pageEventListeners.delete(page)
@@ -210,17 +236,19 @@ function createCloseHandler(page: Page) {
  */
 function registerResponseListener(page: Page) {
   // レスポンスイベントリスナーを登録
-  page.on('response', responseHandler)
+  const responseListener = createResponseListener()
+
+  page.on('response', responseListener)
 
   // ページが閉じられた時のクリーンアップ処理
-  const closeHandler = createCloseHandler(page)
+  const closeHandler = createCloseHandler(page, responseListener)
 
   page.on('close', closeHandler)
 
   // クリーンアップ関数をWeakMapに保存（メモリリーク防止）
   const cleanupFunctions = pageEventListeners.get(page) ?? []
   cleanupFunctions.push(() => {
-    page.off('response', responseHandler)
+    page.off('response', responseListener)
     page.off('close', closeHandler)
   })
   pageEventListeners.set(page, [
