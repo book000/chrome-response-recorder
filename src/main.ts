@@ -67,14 +67,29 @@ const ENVIRONMENT = {
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
-const pageEventListeners = new WeakMap<Page, (() => void)[]>()
+const pageEventListeners = new WeakMap<Page, Set<() => void | Promise<void>>>()
+
+function appendPageCleanup(
+  page: Page,
+  ...cleanup: (() => void | Promise<void>)[]
+) {
+  const existing = pageEventListeners.get(page)
+  if (existing) {
+    for (const cleanupFunction of cleanup) {
+      existing.add(cleanupFunction)
+    }
+    return
+  }
+
+  pageEventListeners.set(page, new Set(cleanup))
+}
 
 // レスポンスハンドラーを外部スコープに移動
 /**
  * HTTPレスポンスを処理し、条件に合致するレスポンスをファイルシステムに保存する
  * @param response - Puppeteerから受信したHTTPResponse
  */
-function responseHandler(response: HTTPResponse) {
+async function responseHandler(response: HTTPResponse) {
   const url = response.url()
   const status = response.status()
   const statusText = response.statusText()
@@ -117,6 +132,8 @@ function responseHandler(response: HTTPResponse) {
   const dataFilePath = `${directory}data.raw`
 
   // レスポンスの詳細情報をまとめる
+  const postData = await response.request().fetchPostData()
+
   const responseData = {
     url,
     status,
@@ -126,7 +143,7 @@ function responseHandler(response: HTTPResponse) {
     request: {
       method,
       headers: response.request().headers(),
-      postData: response.request().postData(),
+      postData,
     },
   }
 
@@ -143,48 +160,69 @@ function responseHandler(response: HTTPResponse) {
   }
 
   // レスポンスボディのバイナリデータを data.raw に保存
-  response
-    .buffer()
-    .then((buffer) => {
+  try {
+    const buffer = await response.buffer()
+
+    await new Promise<void>((resolve, reject) => {
       const writeStream = fs.createWriteStream(dataFilePath)
-      let streamClosed = false
+      let isSettled = false
 
       // ストリームのクリーンアップ処理
-      const cleanup = () => {
-        if (!streamClosed) {
-          streamClosed = true
+      const cleanup = (error?: Error) => {
+        if (isSettled) {
+          return
+        }
+
+        isSettled = true
+
+        if (error) {
           writeStream.destroy()
+          reject(error)
+        } else {
+          resolve()
         }
       }
 
       // タイムアウトを設定してストリームの書き込みを制限（30秒）
       const timeout = setTimeout(() => {
         console.error(`Timeout writing response data: ${dataFilePath}`)
-        cleanup()
+        cleanup(new Error('Write stream timeout'))
       }, 30_000) // 30秒のタイムアウト
 
       writeStream.on('error', (error) => {
-        console.error('Error writing response data:', error)
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+        console.error('Error writing response data:', normalizedError)
         clearTimeout(timeout)
-        cleanup()
+        cleanup(normalizedError)
       })
 
       writeStream.on('finish', () => {
         console.log(`Response data saved to: ${dataFilePath}`)
         clearTimeout(timeout)
-        streamClosed = true
+        cleanup()
       })
 
       writeStream.on('close', () => {
         clearTimeout(timeout)
-        streamClosed = true
+        cleanup()
       })
 
       writeStream.end(buffer)
     })
-    .catch((error: unknown) => {
-      console.error('Error saving response data:', error)
+  } catch (error) {
+    console.error('Error saving response data:', error)
+  }
+}
+
+function createResponseListener() {
+  return (response: HTTPResponse) => {
+    responseHandler(response).catch((error: unknown) => {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error))
+      console.error('Unhandled error in response handler:', normalizedError)
     })
+  }
 }
 
 // ページクローズハンドラー
@@ -193,10 +231,13 @@ function responseHandler(response: HTTPResponse) {
  * @param page - 対象のページオブジェクト
  * @returns クリーンアップ処理を行う関数
  */
-function createCloseHandler(page: Page) {
+function createCloseHandler(
+  page: Page,
+  responseListener: (response: HTTPResponse) => void
+) {
   return function closeHandler() {
     // イベントリスナーを削除
-    page.off('response', responseHandler)
+    page.off('response', responseListener)
     page.off('close', closeHandler)
     // WeakMapから削除（ガベージコレクションを促進）
     pageEventListeners.delete(page)
@@ -210,23 +251,20 @@ function createCloseHandler(page: Page) {
  */
 function registerResponseListener(page: Page) {
   // レスポンスイベントリスナーを登録
-  page.on('response', responseHandler)
+  const responseListener = createResponseListener()
+
+  page.on('response', responseListener)
 
   // ページが閉じられた時のクリーンアップ処理
-  const closeHandler = createCloseHandler(page)
+  const closeHandler = createCloseHandler(page, responseListener)
 
   page.on('close', closeHandler)
 
   // クリーンアップ関数をWeakMapに保存（メモリリーク防止）
-  const cleanupFunctions = pageEventListeners.get(page) ?? []
-  cleanupFunctions.push(() => {
-    page.off('response', responseHandler)
+  appendPageCleanup(page, () => {
+    page.off('response', responseListener)
     page.off('close', closeHandler)
   })
-  pageEventListeners.set(page, [
-    ...(pageEventListeners.get(page) ?? []),
-    ...cleanupFunctions,
-  ])
 }
 
 /**
@@ -241,10 +279,18 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
       console.log(`Registering addon: ${addon.name}`)
       await addon.register(page)
       console.log(`Addon ${addon.name} registered successfully.`)
-      pageEventListeners.set(page, [
-        ...(pageEventListeners.get(page) ?? []),
-        () => addon.unregister(page),
-      ])
+      appendPageCleanup(page, () => {
+        try {
+          const result = addon.unregister(page)
+          if (result instanceof Promise) {
+            result.catch((error: unknown) => {
+              console.error(`Error unregistering addon ${addon.name}:`, error)
+            })
+          }
+        } catch (error) {
+          console.error(`Error unregistering addon ${addon.name}:`, error)
+        }
+      })
     } catch (error) {
       console.error(`Error registering addon ${addon.name}:`, error)
     }
@@ -255,13 +301,28 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
  * ページのイベントリスナーを手動でクリーンアップする
  * @param page - クリーンアップ対象のページ
  */
-function cleanupPage(page: Page) {
+async function cleanupPage(page: Page) {
   const cleanupFunctions = pageEventListeners.get(page)
   if (cleanupFunctions) {
+    const pendingCleanup: Promise<void>[] = []
     for (const cleanup of cleanupFunctions) {
-      cleanup()
+      try {
+        const result = cleanup()
+        if (result instanceof Promise) {
+          pendingCleanup.push(
+            result.catch((error: unknown) => {
+              console.error('Error during page cleanup:', error)
+            })
+          )
+        }
+      } catch (error) {
+        console.error('Error during page cleanup:', error)
+      }
     }
     pageEventListeners.delete(page)
+    if (pendingCleanup.length > 0) {
+      await Promise.all(pendingCleanup)
+    }
   }
 }
 
@@ -290,7 +351,7 @@ async function gracefulShutdown(
   try {
     const pages = await browser.pages()
     for (const page of pages) {
-      cleanupPage(page)
+      await cleanupPage(page)
     }
   } catch (error) {
     console.error('Error cleaning up pages:', error)
@@ -342,10 +403,7 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
           .start()
           .then(() => {
             console.log(`Console logging started for page: ${page.url()}`)
-            pageEventListeners.set(page, [
-              ...(pageEventListeners.get(page) ?? []),
-              ...consoleLogging.getListeners(),
-            ])
+            appendPageCleanup(page, ...consoleLogging.getListeners())
           })
           .catch((error: unknown) => {
             console.error('Error starting console logging:', error)
@@ -578,10 +636,7 @@ async function main() {
     .start()
     .then(() => {
       console.log(`Console logging started for page: ${initialPage.url()}`)
-      pageEventListeners.set(initialPage, [
-        ...(pageEventListeners.get(initialPage) ?? []),
-        ...consoleLogging.getListeners(),
-      ])
+      appendPageCleanup(initialPage, ...consoleLogging.getListeners())
     })
     .catch((error: unknown) => {
       console.error('Error starting console logging:', error)
@@ -644,10 +699,7 @@ async function main() {
         .start()
         .then(() => {
           console.log(`Console logging started for page: ${newPage.url()}`)
-          pageEventListeners.set(newPage, [
-            ...(pageEventListeners.get(newPage) ?? []),
-            ...consoleLogging.getListeners(),
-          ])
+          appendPageCleanup(newPage, ...consoleLogging.getListeners())
         })
         .catch((error: unknown) => {
           console.error('Error starting console logging:', error)
