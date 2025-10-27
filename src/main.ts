@@ -67,11 +67,18 @@ const ENVIRONMENT = {
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
-const pageEventListeners = new WeakMap<Page, (() => void)[]>()
+const pageEventListeners = new WeakMap<Page, Set<() => void>>()
 
 function appendPageCleanup(page: Page, ...cleanup: (() => void)[]) {
-  const existing = pageEventListeners.get(page) ?? []
-  pageEventListeners.set(page, [...existing, ...cleanup])
+  const existing = pageEventListeners.get(page)
+  if (existing) {
+    for (const cleanupFunction of cleanup) {
+      existing.add(cleanupFunction)
+    }
+    return
+  }
+
+  pageEventListeners.set(page, new Set(cleanup))
 }
 
 // レスポンスハンドラーを外部スコープに移動
@@ -270,11 +277,15 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
       await addon.register(page)
       console.log(`Addon ${addon.name} registered successfully.`)
       appendPageCleanup(page, () => {
-        const result = addon.unregister(page)
-        if (result instanceof Promise) {
-          result.catch((error: unknown) => {
-            console.error(`Error unregistering addon ${addon.name}:`, error)
-          })
+        try {
+          const result = addon.unregister(page)
+          if (result instanceof Promise) {
+            result.catch((error: unknown) => {
+              console.error(`Error unregistering addon ${addon.name}:`, error)
+            })
+          }
+        } catch (error) {
+          console.error(`Error unregistering addon ${addon.name}:`, error)
         }
       })
     } catch (error) {
