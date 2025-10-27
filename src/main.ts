@@ -69,6 +69,11 @@ const ENVIRONMENT = {
 // ページごとにイベントリスナーを管理するためのWeakMap
 const pageEventListeners = new WeakMap<Page, (() => void)[]>()
 
+function appendPageCleanup(page: Page, ...cleanup: (() => void)[]) {
+  const existing = pageEventListeners.get(page) ?? []
+  pageEventListeners.set(page, [...existing, ...cleanup])
+}
+
 // レスポンスハンドラーを外部スコープに移動
 /**
  * HTTPレスポンスを処理し、条件に合致するレスポンスをファイルシステムに保存する
@@ -246,15 +251,10 @@ function registerResponseListener(page: Page) {
   page.on('close', closeHandler)
 
   // クリーンアップ関数をWeakMapに保存（メモリリーク防止）
-  const cleanupFunctions = pageEventListeners.get(page) ?? []
-  cleanupFunctions.push(() => {
+  appendPageCleanup(page, () => {
     page.off('response', responseListener)
     page.off('close', closeHandler)
   })
-  pageEventListeners.set(page, [
-    ...(pageEventListeners.get(page) ?? []),
-    ...cleanupFunctions,
-  ])
 }
 
 /**
@@ -269,10 +269,14 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
       console.log(`Registering addon: ${addon.name}`)
       await addon.register(page)
       console.log(`Addon ${addon.name} registered successfully.`)
-      pageEventListeners.set(page, [
-        ...(pageEventListeners.get(page) ?? []),
-        () => addon.unregister(page),
-      ])
+      appendPageCleanup(page, () => {
+        const result = addon.unregister(page)
+        if (result instanceof Promise) {
+          result.catch((error: unknown) => {
+            console.error(`Error unregistering addon ${addon.name}:`, error)
+          })
+        }
+      })
     } catch (error) {
       console.error(`Error registering addon ${addon.name}:`, error)
     }
@@ -370,10 +374,7 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
           .start()
           .then(() => {
             console.log(`Console logging started for page: ${page.url()}`)
-            pageEventListeners.set(page, [
-              ...(pageEventListeners.get(page) ?? []),
-              ...consoleLogging.getListeners(),
-            ])
+            appendPageCleanup(page, ...consoleLogging.getListeners())
           })
           .catch((error: unknown) => {
             console.error('Error starting console logging:', error)
@@ -606,10 +607,7 @@ async function main() {
     .start()
     .then(() => {
       console.log(`Console logging started for page: ${initialPage.url()}`)
-      pageEventListeners.set(initialPage, [
-        ...(pageEventListeners.get(initialPage) ?? []),
-        ...consoleLogging.getListeners(),
-      ])
+      appendPageCleanup(initialPage, ...consoleLogging.getListeners())
     })
     .catch((error: unknown) => {
       console.error('Error starting console logging:', error)
@@ -672,10 +670,7 @@ async function main() {
         .start()
         .then(() => {
           console.log(`Console logging started for page: ${newPage.url()}`)
-          pageEventListeners.set(newPage, [
-            ...(pageEventListeners.get(newPage) ?? []),
-            ...consoleLogging.getListeners(),
-          ])
+          appendPageCleanup(newPage, ...consoleLogging.getListeners())
         })
         .catch((error: unknown) => {
           console.error('Error starting console logging:', error)
