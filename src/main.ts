@@ -67,9 +67,12 @@ const ENVIRONMENT = {
 } as const
 
 // ページごとにイベントリスナーを管理するためのWeakMap
-const pageEventListeners = new WeakMap<Page, Set<() => void>>()
+const pageEventListeners = new WeakMap<Page, Set<() => void | Promise<void>>>()
 
-function appendPageCleanup(page: Page, ...cleanup: (() => void)[]) {
+function appendPageCleanup(
+  page: Page,
+  ...cleanup: (() => void | Promise<void>)[]
+) {
   const existing = pageEventListeners.get(page)
   if (existing) {
     for (const cleanupFunction of cleanup) {
@@ -298,13 +301,28 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
  * ページのイベントリスナーを手動でクリーンアップする
  * @param page - クリーンアップ対象のページ
  */
-function cleanupPage(page: Page) {
+async function cleanupPage(page: Page) {
   const cleanupFunctions = pageEventListeners.get(page)
   if (cleanupFunctions) {
+    const pendingCleanup: Promise<void>[] = []
     for (const cleanup of cleanupFunctions) {
-      cleanup()
+      try {
+        const result = cleanup()
+        if (result instanceof Promise) {
+          pendingCleanup.push(
+            result.catch((error: unknown) => {
+              console.error('Error during page cleanup:', error)
+            })
+          )
+        }
+      } catch (error) {
+        console.error('Error during page cleanup:', error)
+      }
     }
     pageEventListeners.delete(page)
+    if (pendingCleanup.length > 0) {
+      await Promise.all(pendingCleanup)
+    }
   }
 }
 
@@ -333,7 +351,7 @@ async function gracefulShutdown(
   try {
     const pages = await browser.pages()
     for (const page of pages) {
-      cleanupPage(page)
+      await cleanupPage(page)
     }
   } catch (error) {
     console.error('Error cleaning up pages:', error)
