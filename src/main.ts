@@ -215,14 +215,17 @@ async function responseHandler(response: HTTPResponse) {
   }
 }
 
-function createResponseListener() {
-  return (response: HTTPResponse) => {
-    responseHandler(response).catch((error: unknown) => {
-      const normalizedError =
-        error instanceof Error ? error : new Error(String(error))
-      console.error('Unhandled error in response handler:', normalizedError)
-    })
-  }
+/**
+ * レスポンスイベントハンドラー
+ * responseHandler を呼び出し、エラーをキャッチしてログに出力
+ * @param response - HTTP レスポンスオブジェクト
+ */
+function responseEventHandler(response: HTTPResponse) {
+  responseHandler(response).catch((error: unknown) => {
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error))
+    console.error('Unhandled error in response handler:', normalizedError)
+  })
 }
 
 // ページクローズハンドラー
@@ -251,18 +254,16 @@ function createCloseHandler(
  */
 function registerResponseListener(page: Page) {
   // レスポンスイベントリスナーを登録
-  const responseListener = createResponseListener()
-
-  page.on('response', responseListener)
+  page.on('response', responseEventHandler)
 
   // ページが閉じられた時のクリーンアップ処理
-  const closeHandler = createCloseHandler(page, responseListener)
+  const closeHandler = createCloseHandler(page, responseEventHandler)
 
   page.on('close', closeHandler)
 
   // クリーンアップ関数をWeakMapに保存（メモリリーク防止）
   appendPageCleanup(page, () => {
-    page.off('response', responseListener)
+    page.off('response', responseEventHandler)
     page.off('close', closeHandler)
   })
 }
