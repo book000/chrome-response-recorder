@@ -30,7 +30,6 @@ export class ExportCookieAddon implements BaseAddon {
       session: cookie.session,
       sameSite: cookie.sameSite ?? null,
       priority: cookie.priority ?? null,
-      sameParty: cookie.sameParty ?? null,
       sourceScheme: cookie.sourceScheme ?? null,
       partitionKey: cookie.partitionKey ?? null,
       partitionKeyOpaque: cookie.partitionKeyOpaque ?? null,
