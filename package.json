@@ -12,7 +12,7 @@
     "otplib": "13.1.1"
   },
   "devDependencies": {
-    "@book000/eslint-config": "1.12.37",
+    "@book000/eslint-config": "1.12.38",
     "@types/node": "24.10.8",
     "eslint": "9.39.2",
     "eslint-config-standard": "17.1.0",
