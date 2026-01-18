@@ -1,7 +1,7 @@
 import { ElementHandle, Page } from 'puppeteer-core'
 import { BaseAddon } from '.'
 import { setInterval } from 'node:timers/promises'
-import { authenticator } from 'otplib'
+import { generateSync as otpGenerateSync } from 'otplib'
 
 interface TwitterLoginAddonOptions {
   /** Twitterのユーザー名 */
@@ -154,7 +154,7 @@ export class TwitterLoginAddon implements BaseAddon {
     if (!otpSecret) {
       throw new TwitterLoginOperationError('OTP secret required.')
     }
-    const authCode = authenticator.generate(otpSecret)
+    const authCode = otpGenerateSync({ secret: otpSecret })
     await authCodeInput.click({ clickCount: 3 })
     await authCodeInput.press('Backspace')
     await authCodeInput.focus()
