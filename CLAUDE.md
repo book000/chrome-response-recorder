@@ -13,6 +13,23 @@
 - 前提・仮定・不確実性を明示し、仮定を事実のように扱わない。
 
 ## プロジェクト概要
+Records HTTP responses using Puppeteer to interact with Chrome browser. Useful for capturing network responses and automating browser tasks with OTP support.
+
+### 技術スタック
+- **言語**: TypeScript
+- **フレームワーク**: Puppeteer, tsx
+- **パッケージマネージャー**: pnpm@10.28.1
+- **主要な依存関係**:
+  - production:
+    - puppeteer-core@24.35.0
+    - tsx@4.21.0
+    - otplib@13.1.1
+  - development:
+    - @book000/eslint-config@1.12.40
+    - @types/node@24.10.9
+    - typescript@5.9.3
+    - prettier@3.8.0
+    - run-z@2.1.0
 
 ## 重要ルール
 - 会話言語: 日本語
@@ -41,28 +58,61 @@
 - TypeScript 使用時は `skipLibCheck` で回避しない。
 - 関数やインターフェースには docstring（JSDoc など）を記載する。
 
+### コーディング規約
+- **language**: TypeScript
+- **target**: ES2020, CommonJS
+- **tsconfig**: Strict mode enabled, source maps enabled, path alias @/*
+- **eslint**: Uses @book000/eslint-config (extends standard)
+- **prettier**: 80 char line width, single quotes, trailing comma es5, no semicolons
+
 ## 相談ルール
 - Codex CLI: 実装レビュー、局所設計、整合性確認に使う。
 - Gemini CLI: 外部仕様や最新情報の確認に使う。
 - 他エージェントの指摘は黙殺せず、採用または理由を明記して不採用とする。
 
-## 開発コマンド
+### 開発コマンド
 ```bash
-# 依存関係のインストール
-pnpm install
+# dev
+tsx watch ./src/main.ts
 
-# 開発 / テスト / Lint は README を確認してください
+# start
+tsx ./src/main.ts
+
+# lint
+run-z lint:prettier,lint:eslint,lint:tsc
+
+# fix
+run-z fix:prettier fix:eslint
+
 ```
 
-## アーキテクチャと主要ファイル
+### プロジェクト構造
+**ルートファイル:**
+- `tsconfig.json`
+- `eslint.config.mjs`
+- `.prettierrc.yml`
+- `package.json`
+
+**主要ディレクトリ:**
+- `src/`
+- `.devcontainer/`
+- `dist/`
+
+**重要ファイル:**
+- `src/main.ts`
+- `src/console-logging.ts`
+- `src/addon/`
 
 ## 実装パターン
+- 既存のコードパターンに従う。
+- プロジェクト固有の実装ガイドラインがある場合はそれに従う。
 
 ## テスト
 - 方針: 変更内容に応じてテストを追加する。
 
 ## ドキュメント更新ルール
 - 更新タイミング: 実装確定後、同一コミットまたは追加コミットで更新する。
+- README、API ドキュメント、コメント等は常に最新状態を保つ。
 
 ## 作業チェックリスト
 
@@ -93,3 +143,11 @@ pnpm install
 6. PR 本文の崩れがないことを確認する。
 
 ## リポジトリ固有
+- **type**: CLI Tool
+- **entry_point**: src/main.ts
+**features:**
+  - OTP support (otplib)
+  - Console logging utilities
+  - Browser addons (cookie export, Twitter login)
+- **output**: dist/main.js
+- **note**: Compiled TypeScript with source maps and declaration files

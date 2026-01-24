@@ -25,3 +25,11 @@
 - ログに機密情報を出力しない。
 
 ## リポジトリ固有
+- **type**: CLI Tool
+- **entry_point**: src/main.ts
+**features:**
+  - OTP support (otplib)
+  - Console logging utilities
+  - Browser addons (cookie export, Twitter login)
+- **output**: dist/main.js
+- **note**: Compiled TypeScript with source maps and declaration files
