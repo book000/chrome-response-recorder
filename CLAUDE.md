@@ -35,7 +35,7 @@
 
 - **会話言語**: 日本語（途中経過は主要・重要なところ以外は英語で説明可能）
 - **コード内コメント**: 日本語
-- **エラーメッセージ**: 原則英語
+- **エラーメッセージ**: 英語
 - **日本語と英数字の間**: 半角スペースを挿入
 - **コミットメッセージ**: [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。`<description>` は日本語。
 - **ブランチ命名**: [Conventional Branch](https://conventional-branch.github.io) に従う。`<type>` は短縮形（feat, fix）。
