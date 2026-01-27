@@ -35,7 +35,7 @@
 
 - **会話言語**: 日本語（途中経過は主要・重要なところ以外は英語で説明可能）
 - **コード内コメント**: 日本語
-- **エラーメッセージ**: 原則英語
+- **エラーメッセージ**: 英語
 - **日本語と英数字の間**: 半角スペースを挿入
 - **コミットメッセージ**: [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。`<description>` は日本語。
 - **ブランチ命名**: [Conventional Branch](https://conventional-branch.github.io) に従う。`<type>` は短縮形（feat, fix）。
@@ -192,7 +192,7 @@ src/
 
 1. ❌ **skipLibCheck の有効化**: 型検証は必ず実施する
 2. ❌ **グローバル変数の過度な使用**: 環境変数への参照は ENVIRONMENT オブジェクト化を推奨
-3. ❌ **非同期処理の火起こし忘れ**: `.catch()` で必ずエラーハンドリング（Puppeteer の target/page 操作は非同期）
+3. ❌ **非同期処理の catch 漏れ**: `.catch()` で必ずエラーハンドリング（Puppeteer の target/page 操作は非同期）
 4. ❌ **ページリーク**: ページクローズ時に必ずイベントリスナーをクリーンアップ
 5. ❌ **タイムアウトなしの長時間待機**: `waitForSelector` 等は常にタイムアウト指定
 
