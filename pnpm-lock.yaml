@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       otplib:
-        specifier: 13.2.0
-        version: 13.2.0
+        specifier: 13.2.1
+        version: 13.2.1
       puppeteer-core:
         specifier: 24.36.0
         version: 24.36.0
@@ -275,23 +275,23 @@ packages:
     resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
     engines: {node: '>= 20.19.0'}
 
-  '@otplib/core@13.2.0':
-    resolution: {integrity: sha512-A4silkhDfiD63L4uTuJHqeTSTj+ywgusWU8A4h3n/aR2fhq/NU/CtEoqC4QpUz25TO31UGEaPzZicKaGHotzxQ==}
+  '@otplib/core@13.2.1':
+    resolution: {integrity: sha512-IyfHvYNCyipDxhmJdcUUvUeT3Hz84/GgM6G2G6BTEmnAKPzNA7U0kYGkxKZWY9h23W94RJk4qiClJRJN5zKGvg==}
 
-  '@otplib/hotp@13.2.0':
-    resolution: {integrity: sha512-LT6hAcS+iOWYANLw27BOyOvY/IOadHt8k3IE5GLhwsj7c0LggNVv3PCJaAcQISNostamxc8DceRqTHDsAGxoEQ==}
+  '@otplib/hotp@13.2.1':
+    resolution: {integrity: sha512-iRKqvj0TnemtXXtEswzBX50Z0yMNa0lH9PSdr5N4CJc1mDEuUmFFZQqnu3PfA3fPd3WeAU+mHgmK/xq18+K1QA==}
 
-  '@otplib/plugin-base32-scure@13.2.0':
-    resolution: {integrity: sha512-zkHDXs5McCcGwHxIlZ/2Yw7ndaXhwIg2wqOFFfD2pYIKIsRbmL6DKrEknMg9q71IxKPVAFoPMDSYbakxqoFAmw==}
+  '@otplib/plugin-base32-scure@13.2.1':
+    resolution: {integrity: sha512-vnA2qqgJ/FbFbDNGOLAS8dKfCsJFXwFsZKYklE8yl2INkCOUR0vbVdJ2TVmufzC8R1RRZHW+cDR20ACgc9XFYg==}
 
-  '@otplib/plugin-crypto-noble@13.2.0':
-    resolution: {integrity: sha512-91rbIMCNzOrjhCXUZbFNqUgh9Bbf45Jbvn43lxkr/3CbwyoNqGo8bpv3iZtlTs4o/MNGIZHolT1//23nyQsb0A==}
+  '@otplib/plugin-crypto-noble@13.2.1':
+    resolution: {integrity: sha512-Dxjmt4L+5eDWJf5EvbcMp+fxcliyKoB9N9sNQq/vuVAUvq+KiqpiiCQZ/wHyrN0ArB0NdevtK1KByyAq080ldg==}
 
-  '@otplib/totp@13.2.0':
-    resolution: {integrity: sha512-iNMM1r0azic6yoidXefop4gy0w1cHgm1du1QXkMKnYBG5teQLifmeVYm1AyyxjVh8SoGJoQ+dqmDP5zAnzB+Xw==}
+  '@otplib/totp@13.2.1':
+    resolution: {integrity: sha512-LzDzAAK3w8rspF3urBnWjOlxso1SCGxX9Pnu/iy+HkC0y0HgiLsW7jhkr2hJ3u4cyBdL/tOKUhhELwsjyvunwQ==}
 
-  '@otplib/uri@13.2.0':
-    resolution: {integrity: sha512-72ISyPHKYmDpiP5vu5uL9cvUOFlTW2BuRvFVligqWTEPqgluY+uljjq8rMkyUUv/QMIwiFiaxfyn0CntvV3rSg==}
+  '@otplib/uri@13.2.1':
+    resolution: {integrity: sha512-ssYnfiUrFTs/rPRUW8h59m0MVLYOC+UKk7tVGYgtG15lLaLBrNBQjM2YFanuzn9Jm4iv9JxiNG7TRkwcnyR09A==}
 
   '@puppeteer/browsers@2.11.1':
     resolution: {integrity: sha512-YmhAxs7XPuxN0j7LJloHpfD1ylhDuFmmwMvfy/+6nBSrETT2ycL53LrhgPtR+f+GcPSybQVuQ5inWWu5MrWCpA==}
@@ -1288,8 +1288,8 @@ packages:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
 
-  otplib@13.2.0:
-    resolution: {integrity: sha512-UMNtBWc2265hy7j5GtKJFN0jtesPJ1TUNF9YgjHzrxVvJgaKS9NBbTIwataxRzCmeY1d7TUz6fC7fhPJiqBlpg==}
+  otplib@13.2.1:
+    resolution: {integrity: sha512-Cft9h/m34LtvnoB2TjP1E1E6v0biwcUntl6U4e+HgWrTa0bpwmb+u/D9gLFA+U6/ztlvrult0811Bu30nUVUuA==}
 
   own-keys@1.0.1:
     resolution: {integrity: sha512-qFOyK5PjiWZd+QQIh+1jhdb9LpxTF0qs7Pm8o5QHYZ0M3vKqSqzsZaEB6oWlxZ+q2sJBMI/Ktgd2N5ZwQoRHfg==}
@@ -1883,32 +1883,32 @@ snapshots:
 
   '@noble/hashes@2.0.1': {}
 
-  '@otplib/core@13.2.0': {}
+  '@otplib/core@13.2.1': {}
 
-  '@otplib/hotp@13.2.0':
+  '@otplib/hotp@13.2.1':
     dependencies:
-      '@otplib/core': 13.2.0
-      '@otplib/uri': 13.2.0
+      '@otplib/core': 13.2.1
+      '@otplib/uri': 13.2.1
 
-  '@otplib/plugin-base32-scure@13.2.0':
+  '@otplib/plugin-base32-scure@13.2.1':
     dependencies:
-      '@otplib/core': 13.2.0
+      '@otplib/core': 13.2.1
       '@scure/base': 2.0.0
 
-  '@otplib/plugin-crypto-noble@13.2.0':
+  '@otplib/plugin-crypto-noble@13.2.1':
     dependencies:
       '@noble/hashes': 2.0.1
-      '@otplib/core': 13.2.0
+      '@otplib/core': 13.2.1
 
-  '@otplib/totp@13.2.0':
+  '@otplib/totp@13.2.1':
     dependencies:
-      '@otplib/core': 13.2.0
-      '@otplib/hotp': 13.2.0
-      '@otplib/uri': 13.2.0
+      '@otplib/core': 13.2.1
+      '@otplib/hotp': 13.2.1
+      '@otplib/uri': 13.2.1
 
-  '@otplib/uri@13.2.0':
+  '@otplib/uri@13.2.1':
     dependencies:
-      '@otplib/core': 13.2.0
+      '@otplib/core': 13.2.1
 
   '@puppeteer/browsers@2.11.1':
     dependencies:
@@ -3076,14 +3076,14 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
-  otplib@13.2.0:
+  otplib@13.2.1:
     dependencies:
-      '@otplib/core': 13.2.0
-      '@otplib/hotp': 13.2.0
-      '@otplib/plugin-base32-scure': 13.2.0
-      '@otplib/plugin-crypto-noble': 13.2.0
-      '@otplib/totp': 13.2.0
-      '@otplib/uri': 13.2.0
+      '@otplib/core': 13.2.1
+      '@otplib/hotp': 13.2.1
+      '@otplib/plugin-base32-scure': 13.2.1
+      '@otplib/plugin-crypto-noble': 13.2.1
+      '@otplib/totp': 13.2.1
+      '@otplib/uri': 13.2.1
 
   own-keys@1.0.1:
     dependencies:
