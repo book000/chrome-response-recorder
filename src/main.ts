@@ -154,8 +154,8 @@ async function responseHandler(response: HTTPResponse) {
       JSON.stringify(responseData, null, 2),
       'utf8'
     )
-  } catch (error) {
-    console.error('Error writing detail file:', error)
+  } catch (err) {
+    console.error('Error writing detail file:', err)
     return
   }
 
@@ -210,8 +210,8 @@ async function responseHandler(response: HTTPResponse) {
 
       writeStream.end(buffer)
     })
-  } catch (error) {
-    console.error('Error saving response data:', error)
+  } catch (err) {
+    console.error('Error saving response data:', err)
   }
 }
 
@@ -221,9 +221,8 @@ async function responseHandler(response: HTTPResponse) {
  * @param response - HTTP レスポンスオブジェクト
  */
 function responseEventHandler(response: HTTPResponse) {
-  responseHandler(response).catch((error: unknown) => {
-    const normalizedError =
-      error instanceof Error ? error : new Error(String(error))
+  responseHandler(response).catch((err: unknown) => {
+    const normalizedError = err instanceof Error ? err : new Error(String(err))
     console.error('Unhandled error in response handler:', normalizedError)
   })
 }
@@ -284,16 +283,16 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
         try {
           const result = addon.unregister(page)
           if (result instanceof Promise) {
-            result.catch((error: unknown) => {
-              console.error(`Error unregistering addon ${addon.name}:`, error)
+            result.catch((err: unknown) => {
+              console.error(`Error unregistering addon ${addon.name}:`, err)
             })
           }
-        } catch (error) {
-          console.error(`Error unregistering addon ${addon.name}:`, error)
+        } catch (err) {
+          console.error(`Error unregistering addon ${addon.name}:`, err)
         }
       })
-    } catch (error) {
-      console.error(`Error registering addon ${addon.name}:`, error)
+    } catch (err) {
+      console.error(`Error registering addon ${addon.name}:`, err)
     }
   }
 }
@@ -311,13 +310,13 @@ async function cleanupPage(page: Page) {
         const result = cleanup()
         if (result instanceof Promise) {
           pendingCleanup.push(
-            result.catch((error: unknown) => {
-              console.error('Error during page cleanup:', error)
+            result.catch((err: unknown) => {
+              console.error('Error during page cleanup:', err)
             })
           )
         }
-      } catch (error) {
-        console.error('Error during page cleanup:', error)
+      } catch (err) {
+        console.error('Error during page cleanup:', err)
       }
     }
     pageEventListeners.delete(page)
@@ -354,8 +353,8 @@ async function gracefulShutdown(
     for (const page of pages) {
       await cleanupPage(page)
     }
-  } catch (error) {
-    console.error('Error cleaning up pages:', error)
+  } catch (err) {
+    console.error('Error cleaning up pages:', err)
   }
 
   // ブラウザのイベントリスナーをクリーンアップ
@@ -367,8 +366,8 @@ async function gracefulShutdown(
   try {
     await browser.close()
     console.log('Browser closed successfully.')
-  } catch (error) {
-    console.error('Error closing browser:', error)
+  } catch (err) {
+    console.error('Error closing browser:', err)
   }
 
   throw new Error(`Process terminated by ${signal}`)
@@ -406,20 +405,20 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
             console.log(`Console logging started for page: ${page.url()}`)
             appendPageCleanup(page, ...consoleLogging.getListeners())
           })
-          .catch((error: unknown) => {
-            console.error('Error starting console logging:', error)
+          .catch((err: unknown) => {
+            console.error('Error starting console logging:', err)
           })
         // アドオンを登録
         registerAddons(addons, page)
           .then(() => {
             console.log(`Addons registered for page: ${page.url()}`)
           })
-          .catch((error: unknown) => {
-            console.error('Error registering addons:', error)
+          .catch((err: unknown) => {
+            console.error('Error registering addons:', err)
           })
       })
-      .catch((error: unknown) => {
-        console.error('Error getting page:', error)
+      .catch((err: unknown) => {
+        console.error('Error getting page:', err)
       })
   }
 }
@@ -443,9 +442,9 @@ function createDisconnectedHandler(
       browser,
       restartIntervalId,
       browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during disconnection shutdown:', error)
-      throw error
+    ).catch((err: unknown) => {
+      console.error('Error during disconnection shutdown:', err)
+      throw err
     })
   }
 }
@@ -476,8 +475,8 @@ function setPreferenceExitType() {
       'utf8'
     )
     console.log('Set exit_type to "normal" in Preferences file.')
-  } catch (error) {
-    console.error('Error setting exit_type in Preferences:', error)
+  } catch (err) {
+    console.error('Error setting exit_type in Preferences:', err)
   }
 }
 
@@ -589,9 +588,9 @@ async function main() {
       browser,
       restartIntervalId,
       browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during graceful shutdown:', error)
-      throw error
+    ).catch((err: unknown) => {
+      console.error('Error during graceful shutdown:', err)
+      throw err
     })
   })
   process.on('SIGTERM', () => {
@@ -600,9 +599,9 @@ async function main() {
       browser,
       restartIntervalId,
       browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during graceful shutdown:', error)
-      throw error
+    ).catch((err: unknown) => {
+      console.error('Error during graceful shutdown:', err)
+      throw err
     })
   })
 
@@ -617,9 +616,9 @@ async function main() {
         browser,
         restartIntervalId,
         browserEventListeners
-      ).catch((error: unknown) => {
-        console.error('Error during restart:', error)
-        throw error
+      ).catch((err: unknown) => {
+        console.error('Error during restart:', err)
+        throw err
       })
     }, ENVIRONMENT.RESTART_INTERVAL_SECONDS * 1000)
   }
@@ -639,8 +638,8 @@ async function main() {
       console.log(`Console logging started for page: ${initialPage.url()}`)
       appendPageCleanup(initialPage, ...consoleLogging.getListeners())
     })
-    .catch((error: unknown) => {
-      console.error('Error starting console logging:', error)
+    .catch((err: unknown) => {
+      console.error('Error starting console logging:', err)
     })
   // 初期ページに対してアドオンを登録
   await registerAddons(activeAddons, initialPage)
@@ -680,8 +679,8 @@ async function main() {
         waitUntil: 'networkidle2', // ネットワークが安定するまで待機
         timeout: 30_000,
       })
-    } catch (error) {
-      console.error(`Error opening initial URL ${firstUrl}:`, error)
+    } catch (err) {
+      console.error(`Error opening initial URL ${firstUrl}:`, err)
     }
   }
 
@@ -702,16 +701,16 @@ async function main() {
           console.log(`Console logging started for page: ${newPage.url()}`)
           appendPageCleanup(newPage, ...consoleLogging.getListeners())
         })
-        .catch((error: unknown) => {
-          console.error('Error starting console logging:', error)
+        .catch((err: unknown) => {
+          console.error('Error starting console logging:', err)
         })
       await registerAddons(activeAddons, newPage)
       await newPage.goto(url, {
         waitUntil: 'networkidle2',
         timeout: 30_000,
       })
-    } catch (error) {
-      console.error(`Error opening URL ${url}:`, error)
+    } catch (err) {
+      console.error(`Error opening URL ${url}:`, err)
     }
   }
 }
@@ -723,8 +722,8 @@ async function main() {
 ;(async () => {
   try {
     await main()
-  } catch (error) {
-    console.error('Error in main function:', error)
+  } catch (err) {
+    console.error('Error in main function:', err)
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(1)
   }

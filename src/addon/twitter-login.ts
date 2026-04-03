@@ -36,11 +36,11 @@ export class TwitterLoginAddon implements BaseAddon {
   }
 
   register(page: Page): void {
-    this.checkerPageChanged(page).catch((error: unknown) => {
-      if (error instanceof TwitterLoginOperationError) {
-        console.error(`Twitter operation error: ${error.message}`)
+    this.checkerPageChanged(page).catch((err: unknown) => {
+      if (err instanceof TwitterLoginOperationError) {
+        console.error(`Twitter operation error: ${err.message}`)
       } else {
-        console.error('An unexpected error occurred:', error)
+        console.error('An unexpected error occurred:', err)
       }
     })
   }
