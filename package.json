@@ -21,7 +21,7 @@
     "eslint-plugin-promise": "7.2.1",
     "prettier": "3.8.1",
     "run-z": "2.1.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.2"
   },
   "homepage": "https://github.com/book000/chrome-response-recorder",
   "license": "MIT",
