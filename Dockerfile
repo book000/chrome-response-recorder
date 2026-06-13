@@ -24,10 +24,11 @@ RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC && \
 WORKDIR /app
 
 COPY pnpm-lock.yaml ./
+COPY package.json ./
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
 
-COPY package.json tsconfig.json ./
+COPY tsconfig.json ./
 COPY src src
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
