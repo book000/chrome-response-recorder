@@ -9,7 +9,7 @@
   "dependencies": {
     "puppeteer-core": "24.42.0",
     "tsx": "4.21.0",
-    "otplib": "13.4.0"
+    "otplib": "13.4.1"
   },
   "devDependencies": {
     "@book000/eslint-config": "1.14.61",
