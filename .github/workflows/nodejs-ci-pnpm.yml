@@ -16,4 +16,4 @@ on:
 jobs:
   node-ci:
     name: Node CI
-    uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@0973a96ab08cb4eb8820eaa5b35bde6d4f745118 # master
+    uses: book000/templates/.github/workflows/reusable-nodejs-ci-pnpm.yml@1f725b61fe3b897dde4fc3c02d8f9496d3cdb428 # master
