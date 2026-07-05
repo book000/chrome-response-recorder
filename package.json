@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "puppeteer-core": "24.43.1",
-    "tsx": "4.22.4",
+    "tsx": "4.22.5",
     "otplib": "13.4.1"
   },
   "devDependencies": {
