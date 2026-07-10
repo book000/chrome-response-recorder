@@ -28,8 +28,8 @@ Docker (VNC/noVNC + supervisord) 上での常駐実行を前提とする。
   リーク）を指摘する。
 - **タイムアウト**: `waitForSelector` など待機系 API はタイムアウト指定必須。無制限待機を指摘する。
 - **グレースフルシャットダウン**: SIGINT/SIGTERM 時のリソース解放漏れを指摘する。
-- **型検査の回避禁止**: `skipLibCheck` の有効化や `@ts-ignore` / `any` による型エラー握り
-  つぶしは指摘する（`tsc` は strict でレビュー・CI 対象）。
+- **型検査の回避禁止**: `skipLibCheck` の有効化や `@ts-ignore` / `any` による型エラーの
+  握りつぶしは指摘する（`tsc` は strict でレビュー・CI 対象）。
 
 ## セキュリティ
 
