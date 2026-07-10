@@ -1,99 +1,56 @@
 # GitHub Copilot Instructions
 
+GitHub Copilot によるコードレビュー向けの指示。このリポジトリの変更をレビューする際に
+重点的に確認すべき観点を示す。開発作業全体の方針は `CLAUDE.md` を参照。
+
 ## プロジェクト概要
 
-- **目的**: Puppeteer を用いた Chromium ブラウザの自動操作と HTTP レスポンスの記録・監視
-- **主な機能**:
-  - HTTP レスポンスの自動キャプチャと構造化ファイルシステム保存
-  - ブラウザコンソールログの JSONL 形式での記録
-  - Twitter 自動ログイン機能（ユーザー名・パスワード・ OTP 対応）
-  - Cookie エクスポート機能
-  - 複数 URL の同時ブラウジング対応
-  - VNC/noVNC による GUI 操作監視
-- **対象ユーザー**: 開発者、テスター、HTTP トラフィック監視を必要とするユーザー
-- **ライセンス**: MIT
+Puppeteer (puppeteer-core) を用いて Chromium を自動操作し、HTTP レスポンスやブラウザ
+コンソールログを構造化ファイルとして記録・監視する TypeScript / Node.js アプリケーション。
+Docker (VNC/noVNC + supervisord) 上での常駐実行を前提とする。
 
-## 共通ルール
+## レビュー時の言語・記述規約
 
-- 会話は日本語で行う。
-- PR とコミットは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) に従う。ただし、`<description>` は日本語で記載する。
-- ブランチ命名は [Conventional Branch](https://conventional-branch.github.io) に従う。ただし、`<type>` は短縮形（feat, fix）を使用する。
+- コード内コメントと JSDoc は日本語。エラーメッセージは英語。
 - 日本語と英数字の間には半角スペースを入れる。
+- コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+  に従う（`<description>` は日本語）。この規約から外れた PR タイトル・コミットは指摘する。
+- すべての関数・インターフェースに JSDoc（日本語）があること。追加・変更された関数に
+  JSDoc が欠けている場合は指摘する。
 
-## 技術スタック
+## 重点確認ポイント
 
-- **言語**: TypeScript 5.9.3
-- **ランタイム**: Node.js 24.13.0
-- **パッケージマネージャー**: pnpm 10.28.1（強制）
-- **主要な依存パッケージ**:
-  - `puppeteer-core` 24.35.0 - ブラウザ自動化
-  - `tsx` 4.21.0 - TypeScript 実行
-  - `otplib` 13.1.1 - OTP（One-Time Password）生成
-- **Docker**: イメージベースは `zenika/alpine-chrome:with-puppeteer-xvfb`
-- **プロセス管理**: supervisord（Xvfb, x11vnc, noVNC, app）
+- **非同期エラーハンドリング**: Puppeteer の target/page 操作は非同期で失敗しうる。
+  `await` 漏れや `.catch()` の欠落、try/catch なしの await を指摘する。エラーは
+  `error instanceof Error ? error : new Error(String(error))` で正規化する慣習に従っているか。
+- **イベントリスナーのクリーンアップ**: ページごとのリスナーは WeakMap で管理し、
+  ページクローズ時に確実に解除する。リスナー登録に対応する解除処理が無い変更（ページ
+  リーク）を指摘する。
+- **タイムアウト**: `waitForSelector` など待機系 API はタイムアウト指定必須。無制限待機を指摘する。
+- **グレースフルシャットダウン**: SIGINT/SIGTERM 時のリソース解放漏れを指摘する。
+- **型検査の回避禁止**: `skipLibCheck` の有効化や `@ts-ignore` / `any` による型エラー握り
+  つぶしは指摘する（`tsc` は strict でレビュー・CI 対象）。
 
-## コーディング規約
+## セキュリティ
 
-- **コード内コメント**: 日本語
-- **エラーメッセージ**: 英語
-- **フォーマット**: Prettier 3.8.1 を使用
-- **Lint**: ESLint 9.39.2 + `@book000/eslint-config` 1.12.40 を使用
-- **TypeScript**: `skipLibCheck` での回避は禁止
-- **docstring**: すべての関数・インターフェースに JSDoc を日本語で記載・更新する
+- 認証情報（`TWITTER_USERNAME`, `TWITTER_PASSWORD`, `TWITTER_OTP_SECRET`, Cookie など）を
+  ソースコードやログにハードコード・出力していないか。これらは環境変数で管理する。
+- ログや保存ファイルに個人情報・認証情報が混入していないか。
 
-## 開発コマンド
+## 誤検知しやすい既知パターン（フラグ不要）
 
-```bash
-# 依存関係のインストール（必ず pnpm を使用）
-pnpm install
+- `--no-sandbox` / `--disable-setuid-sandbox` などの Puppeteer 起動引数は、コンテナ内
+  実行のため意図的に付与している。セキュリティ上の指摘として挙げない。
+- テストフレームワークは未導入。品質保証は Lint（Prettier + ESLint）と `tsc` 型チェックで
+  行う。「テストが無い」ことを一律に指摘しない。
+- パッケージマネージャは pnpm のみ（`preinstall` の `only-allow pnpm` で強制）。npm/yarn の
+  利用を提案しない。
+- 依存パッケージのバージョンは Renovate が自動更新する。バージョン固定に関する一般的な
+  指摘は不要。
 
-# 開発（ホットリロード対応）
-pnpm dev
+## 補足
 
-# 本番実行
-pnpm start
-
-# Lint チェック（Prettier + ESLint + TypeScript 型チェック）
-pnpm lint
-
-# 自動整形（Prettier + ESLint --fix）
-pnpm fix
-```
-
-## テスト方針
-
-- **テストフレームワーク**: 未実装（package.json に test スクリプトなし）
-- **品質保証方法**:
-  - Lint（ESLint + Prettier）によるコード品質管理
-  - TypeScript 型チェック（strict mode）
-  - GitHub Renovate による依存パッケージ自動更新
-- **CI/CD**:
-  - Node.js ビルド・Lint チェック（GitHub Actions のリユーザブルワークフロー）
-  - Docker ビルドテスト（別ワークフロー）
-
-## セキュリティ / 機密情報
-
-- API キーや認証情報（`TWITTER_USERNAME`, `TWITTER_PASSWORD`, `TWITTER_OTP_SECRET` など）は環境変数で管理し、Git にコミットしない。
-- ログに個人情報や認証情報を出力しない。
-- センシティブな環境変数は Docker Compose または環境変数ファイル（`.env` など）で管理する。
-
-## ドキュメント更新
-
-機能追加・変更時には以下のドキュメントを更新する：
-
-- `README.md` - 機能説明、使用方法
-- `package.json` - scripts、dependencies の変更
-- JSDoc コメント - 関数・インターフェースの変更
-
-## リポジトリ固有
-
-- **pnpm 強制**: `preinstall` スクリプトで `only-allow pnpm` を実行し、npm/yarn の使用を防止している。
-- **Docker 環境**:
-  - ベースイメージ: `zenika/alpine-chrome:with-puppeteer-xvfb`
-  - タイムゾーン: Asia/Tokyo（固定）
-  - VNC Web UI: http://localhost:8080 (noVNC)
-  - VNC Protocol: localhost:5900 (x11vnc)
-- **環境変数**: プロジェクト固有の環境変数が多数存在する（`VNC_SCREEN_SIZE`, `CHROMIUM_PATH`, `TARGET_URL_REGEXS`, `STARTUP_URLS`, `ACTIVE_ADDONS` など）。詳細は `src/main.ts` を参照。
-- **アドオンパターン**: 抽象ベースクラス `BaseAddon` を継承してアドオンを実装する（`src/addon/` 配下）。
-- **イベントリスナー管理**: WeakMap を使用したページごとのリスナー管理とクリーンアップを実施する。
-- **Renovate PR**: Renovate が作成した PR に対して、追加コミットや更新を行ってはならない。
+- Lint/Format は `@book000/eslint-config` ベースの ESLint と Prettier で強制される。
+  スタイル面の細かな指摘より、上記の設計・安全性の観点を優先する。
+- 具体的な依存バージョンやアーキテクチャ詳細は陳腐化を避けるためここには固定しない。
+  `package.json` および `CLAUDE.md` を参照。
