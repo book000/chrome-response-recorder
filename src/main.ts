@@ -36,8 +36,7 @@ const ENVIRONMENT = {
   /** 起動時に開くURLのリスト（カンマ区切り） */
   STARTUP_URLS: process.env.STARTUP_URLS ?? '',
   /** ブラウザの自動再起動間隔（秒）。0の場合は再起動しない */
-  RESTART_INTERVAL_SECONDS:
-    Number.parseInt(process.env.RESTART_INTERVAL_SECONDS ?? '0', 10) || 0,
+  RESTART_INTERVAL_SECONDS: Number(process.env.RESTART_INTERVAL_SECONDS) || 0,
   /** ビューポートの幅（ピクセル）。未指定の場合はVNC_SCREEN_SIZEの幅を使用 */
   VIEWPORT_WIDTH: process.env.VIEWPORT_WIDTH
     ? Number(process.env.VIEWPORT_WIDTH)
@@ -221,11 +220,16 @@ async function responseHandler(response: HTTPResponse) {
  * @param response - HTTP レスポンスオブジェクト
  */
 function responseEventHandler(response: HTTPResponse) {
-  responseHandler(response).catch((error: unknown) => {
-    const normalizedError =
-      error instanceof Error ? error : new Error(String(error))
-    console.error('Unhandled error in response handler:', normalizedError)
-  })
+  // Page.onはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+  ;(async () => {
+    try {
+      await responseHandler(response)
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error))
+      console.error('Unhandled error in response handler:', normalizedError)
+    }
+  })()
 }
 
 // ページクローズハンドラー
@@ -280,13 +284,11 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
       console.log(`Registering addon: ${addon.name}`)
       await addon.register(page)
       console.log(`Addon ${addon.name} registered successfully.`)
-      appendPageCleanup(page, () => {
+      appendPageCleanup(page, async () => {
         try {
           const result = addon.unregister(page)
           if (result instanceof Promise) {
-            result.catch((error: unknown) => {
-              console.error(`Error unregistering addon ${addon.name}:`, error)
-            })
+            await result
           }
         } catch (error) {
           console.error(`Error unregistering addon ${addon.name}:`, error)
@@ -311,9 +313,13 @@ async function cleanupPage(page: Page) {
         const result = cleanup()
         if (result instanceof Promise) {
           pendingCleanup.push(
-            result.catch((error: unknown) => {
-              console.error('Error during page cleanup:', error)
-            })
+            (async () => {
+              try {
+                await result
+              } catch (error) {
+                console.error('Error during page cleanup:', error)
+              }
+            })()
           )
         }
       } catch (error) {
@@ -385,9 +391,10 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
     if (target.type() !== TargetType.PAGE) {
       return
     }
-    target
-      .page()
-      .then((page: Page | null) => {
+    // targetcreatedはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    ;(async () => {
+      try {
+        const page = await target.page()
         if (!page) {
           return
         }
@@ -400,27 +407,28 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
           page,
           ENVIRONMENT.CONSOLE_LOG_DIR
         )
-        consoleLogging
-          .start()
-          .then(() => {
+        // コンソールロギングの開始とアドオン登録は互いを待たず並行実行する
+        ;(async () => {
+          try {
+            await consoleLogging.start()
             console.log(`Console logging started for page: ${page.url()}`)
             appendPageCleanup(page, ...consoleLogging.getListeners())
-          })
-          .catch((error: unknown) => {
+          } catch (error) {
             console.error('Error starting console logging:', error)
-          })
-        // アドオンを登録
-        registerAddons(addons, page)
-          .then(() => {
+          }
+        })()
+        ;(async () => {
+          try {
+            await registerAddons(addons, page)
             console.log(`Addons registered for page: ${page.url()}`)
-          })
-          .catch((error: unknown) => {
+          } catch (error) {
             console.error('Error registering addons:', error)
-          })
-      })
-      .catch((error: unknown) => {
+          }
+        })()
+      } catch (error) {
         console.error('Error getting page:', error)
-      })
+      }
+    })()
   }
 }
 
@@ -438,15 +446,20 @@ function createDisconnectedHandler(
 ) {
   return () => {
     console.log('Browser disconnected. Exiting process...')
-    gracefulShutdown(
-      'BROWSER_DISCONNECTED',
-      browser,
-      restartIntervalId,
-      browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during disconnection shutdown:', error)
-      throw error
-    })
+    // disconnectedはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    ;(async () => {
+      try {
+        await gracefulShutdown(
+          'BROWSER_DISCONNECTED',
+          browser,
+          restartIntervalId,
+          browserEventListeners
+        )
+      } catch (error) {
+        console.error('Error during disconnection shutdown:', error)
+        throw error
+      }
+    })()
   }
 }
 
@@ -584,26 +597,36 @@ async function main() {
 
   // プロセス終了シグナルをリッスン
   process.on('SIGINT', () => {
-    gracefulShutdown(
-      'SIGINT',
-      browser,
-      restartIntervalId,
-      browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during graceful shutdown:', error)
-      throw error
-    })
+    // SIGINTはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    ;(async () => {
+      try {
+        await gracefulShutdown(
+          'SIGINT',
+          browser,
+          restartIntervalId,
+          browserEventListeners
+        )
+      } catch (error) {
+        console.error('Error during graceful shutdown:', error)
+        throw error
+      }
+    })()
   })
   process.on('SIGTERM', () => {
-    gracefulShutdown(
-      'SIGTERM',
-      browser,
-      restartIntervalId,
-      browserEventListeners
-    ).catch((error: unknown) => {
-      console.error('Error during graceful shutdown:', error)
-      throw error
-    })
+    // SIGTERMはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    ;(async () => {
+      try {
+        await gracefulShutdown(
+          'SIGTERM',
+          browser,
+          restartIntervalId,
+          browserEventListeners
+        )
+      } catch (error) {
+        console.error('Error during graceful shutdown:', error)
+        throw error
+      }
+    })()
   })
 
   // 定期的なブラウザの再起動設定
@@ -612,15 +635,20 @@ async function main() {
       console.log(
         `Restarting browser after ${ENVIRONMENT.RESTART_INTERVAL_SECONDS} seconds...`
       )
-      gracefulShutdown(
-        'RESTART_INTERVAL',
-        browser,
-        restartIntervalId,
-        browserEventListeners
-      ).catch((error: unknown) => {
-        console.error('Error during restart:', error)
-        throw error
-      })
+      // setIntervalのコールバックはvoid返却を期待するため、IIFEで意図的にawaitせず起動する
+      ;(async () => {
+        try {
+          await gracefulShutdown(
+            'RESTART_INTERVAL',
+            browser,
+            restartIntervalId,
+            browserEventListeners
+          )
+        } catch (error) {
+          console.error('Error during restart:', error)
+          throw error
+        }
+      })()
     }, ENVIRONMENT.RESTART_INTERVAL_SECONDS * 1000)
   }
 
@@ -633,15 +661,16 @@ async function main() {
     initialPage,
     ENVIRONMENT.CONSOLE_LOG_DIR
   )
-  consoleLogging
-    .start()
-    .then(() => {
+  // コンソールロギングの開始はアドオン登録を待たず並行実行する
+  ;(async () => {
+    try {
+      await consoleLogging.start()
       console.log(`Console logging started for page: ${initialPage.url()}`)
       appendPageCleanup(initialPage, ...consoleLogging.getListeners())
-    })
-    .catch((error: unknown) => {
+    } catch (error) {
       console.error('Error starting console logging:', error)
-    })
+    }
+  })()
   // 初期ページに対してアドオンを登録
   await registerAddons(activeAddons, initialPage)
 
@@ -696,15 +725,16 @@ async function main() {
         newPage,
         ENVIRONMENT.CONSOLE_LOG_DIR
       )
-      consoleLogging
-        .start()
-        .then(() => {
+      // コンソールロギングの開始はアドオン登録を待たず並行実行する
+      ;(async () => {
+        try {
+          await consoleLogging.start()
           console.log(`Console logging started for page: ${newPage.url()}`)
           appendPageCleanup(newPage, ...consoleLogging.getListeners())
-        })
-        .catch((error: unknown) => {
+        } catch (error) {
           console.error('Error starting console logging:', error)
-        })
+        }
+      })()
       await registerAddons(activeAddons, newPage)
       await newPage.goto(url, {
         waitUntil: 'networkidle2',
