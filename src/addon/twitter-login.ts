@@ -36,13 +36,18 @@ export class TwitterLoginAddon implements BaseAddon {
   }
 
   register(page: Page): void {
-    this.checkerPageChanged(page).catch((error: unknown) => {
-      if (error instanceof TwitterLoginOperationError) {
-        console.error(`Twitter operation error: ${error.message}`)
-      } else {
-        console.error('An unexpected error occurred:', error)
+    // checkerPageChangedはページが監視終了するまで待ち続けるため、IIFEで意図的にawaitせず起動する
+    ;(async () => {
+      try {
+        await this.checkerPageChanged(page)
+      } catch (error) {
+        if (error instanceof TwitterLoginOperationError) {
+          console.error(`Twitter operation error: ${error.message}`)
+        } else {
+          console.error('An unexpected error occurred:', error)
+        }
       }
-    })
+    })()
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -51,10 +56,11 @@ export class TwitterLoginAddon implements BaseAddon {
   }
 
   async checkerPageChanged(page: Page) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const _ of setInterval(1 * 1000, {
+    const interval = setInterval(1 * 1000, undefined, {
       signal: this.controller.signal,
-    })) {
+    })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const _tick of interval) {
       await this.login(page)
     }
   }

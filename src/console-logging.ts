@@ -29,29 +29,31 @@ export class ConsoleLogging {
   }
 
   private async registerHandlers() {
-    const consoleHandlerFunc = this.consoleHandler.bind(this)
-    const errorHandlerFunc = this.errorHandler.bind(this)
-    const requestFailedHandlerFunc = this.requestFailedHandler.bind(this)
-    const consoleApiCalledHandlerFunc = this.consoleApiCalledHandler.bind(this)
+    const consoleHandlerFunction = this.consoleHandler.bind(this)
+    const errorHandlerFunction = this.errorHandler.bind(this)
+    const requestFailedHandlerFunction = this.requestFailedHandler.bind(this)
+    const consoleApiCalledHandlerFunction =
+      this.consoleApiCalledHandler.bind(this)
 
-    this.page.on('console', consoleHandlerFunc)
-    this.page.on('pageerror', errorHandlerFunc)
-    this.page.on('requestfailed', requestFailedHandlerFunc)
+    this.page.on('console', consoleHandlerFunction)
+    this.page.on('pageerror', errorHandlerFunction)
+    this.page.on('requestfailed', requestFailedHandlerFunction)
     const client = await this.page.createCDPSession()
     await client.send('Runtime.enable')
-    client.on('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
+    client.on('Runtime.consoleAPICalled', consoleApiCalledHandlerFunction)
 
     this.listeners.push(
-      () => this.page.off('console', consoleHandlerFunc),
-      () => this.page.off('pageerror', errorHandlerFunc),
-      () => this.page.off('requestfailed', requestFailedHandlerFunc),
-      () => client.off('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
+      () => this.page.off('console', consoleHandlerFunction),
+      () => this.page.off('pageerror', errorHandlerFunction),
+      () => this.page.off('requestfailed', requestFailedHandlerFunction),
+      () =>
+        client.off('Runtime.consoleAPICalled', consoleApiCalledHandlerFunction)
     )
   }
 
   private consoleHandler(message: ConsoleMessage) {
     this.logMessage('console', message.type(), message.text(), {
-      args: message.args().map((arg) => arg.toString()),
+      args: message.args().map((argument) => argument.toString()),
       location: {
         url: message.location().url ?? null,
         lineNumber: message.location().lineNumber ?? null,
@@ -103,7 +105,7 @@ export class ConsoleLogging {
 
     const { type, args, stackTrace } = runtimeEvent
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    const message = args.map((arg) => arg.value).join(' ')
+    const message = args.map((argument) => argument.value).join(' ')
     this.logMessage('consoleApiCalled', type, message, {
       args,
       stackTraces: stackTrace

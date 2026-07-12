@@ -35,9 +35,9 @@ export class ExportCookieAddon implements BaseAddon {
       partitionKeyOpaque: cookie.partitionKeyOpaque ?? null,
     }))
 
-    const cookieDir = path.dirname(this.cookieFilePath)
-    if (!fs.existsSync(cookieDir)) {
-      fs.mkdirSync(cookieDir, { recursive: true })
+    const cookieDirectory = path.dirname(this.cookieFilePath)
+    if (!fs.existsSync(cookieDirectory)) {
+      fs.mkdirSync(cookieDirectory, { recursive: true })
     }
     fs.writeFileSync(this.cookieFilePath, JSON.stringify(cookieData, null, 2))
     console.log(`Cookies exported to ${this.cookieFilePath}`)
