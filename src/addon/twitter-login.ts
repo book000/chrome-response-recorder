@@ -95,7 +95,7 @@ export class TwitterLoginAddon implements BaseAddon {
     if (!username) {
       throw new TwitterLoginOperationError('Username required.')
     }
-    await usernameInput.click({ clickCount: 3 })
+    await usernameInput.click({ count: 3 })
     await usernameInput.press('Backspace')
     await usernameInput.focus()
     await usernameInput.type(username, { delay: 100 })
@@ -123,7 +123,7 @@ export class TwitterLoginAddon implements BaseAddon {
     if (!password) {
       throw new TwitterLoginOperationError('Password required.')
     }
-    await passwordInput.click({ clickCount: 3 })
+    await passwordInput.click({ count: 3 })
     await passwordInput.press('Backspace')
     await passwordInput.focus()
     await passwordInput.type(password, { delay: 100 })
@@ -155,7 +155,7 @@ export class TwitterLoginAddon implements BaseAddon {
       throw new TwitterLoginOperationError('OTP secret required.')
     }
     const authCode = otpGenerateSync({ secret: otpSecret })
-    await authCodeInput.click({ clickCount: 3 })
+    await authCodeInput.click({ count: 3 })
     await authCodeInput.press('Backspace')
     await authCodeInput.focus()
     await authCodeInput.type(authCode, { delay: 100 })
@@ -188,7 +188,7 @@ export class TwitterLoginAddon implements BaseAddon {
       throw new TwitterLoginOperationError('Email address required.')
     }
 
-    await emailInput.click({ clickCount: 3 })
+    await emailInput.click({ count: 3 })
     await emailInput.press('Backspace')
     await emailInput.focus()
     await emailInput.type(emailAddress, { delay: 100 })
