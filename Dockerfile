@@ -1,7 +1,24 @@
-FROM zenika/alpine-chrome:with-puppeteer-xvfb AS runner
+FROM node:24-alpine AS deps
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME/bin:$PATH"
+
+RUN corepack enable
+
+WORKDIR /app
+
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+COPY package.json ./
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
+
+COPY tsconfig.json ./
+COPY src src
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
+
+FROM zenika/alpine-chrome:with-puppeteer-xvfb AS runner
 
 # hadolint ignore=DL3002
 USER root
@@ -13,9 +30,7 @@ RUN apk upgrade --no-cache --available && \
   cp /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
   echo "Asia/Tokyo" > /etc/timezone && \
   apk del tzdata && \
-  apk add --no-cache supervisor bash && \
-  npm install -g corepack@latest && \
-  corepack enable
+  apk add --no-cache supervisor bash
 
 WORKDIR /opt
 RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC && \
@@ -23,15 +38,10 @@ RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC && \
 
 WORKDIR /app
 
-COPY pnpm-lock.yaml ./
-COPY package.json ./
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
-
-COPY tsconfig.json ./
-COPY src src
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
+COPY --from=deps /app/package.json ./
+COPY --from=deps /app/tsconfig.json ./
+COPY --from=deps /app/src ./src
+COPY --from=deps /app/node_modules ./node_modules
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
