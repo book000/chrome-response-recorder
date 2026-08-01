@@ -19,8 +19,8 @@ importers:
         version: 4.23.1
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.23
-        version: 1.16.23(eslint@10.8.0)(typescript@6.0.3)
+        specifier: 1.16.24
+        version: 1.16.24(eslint@10.8.0)(typescript@6.0.3)
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
@@ -51,8 +51,8 @@ importers:
 
 packages:
 
-  '@book000/eslint-config@1.16.23':
-    resolution: {integrity: sha512-Inv9keytJJzzMH1EJZ0ogKEEUR/fpTwH+KmYo4UFWbrozgksVgqc8YCsKOkH9YLnocPm6ZMqMloJ5UW2xgY5gg==}
+  '@book000/eslint-config@1.16.24':
+    resolution: {integrity: sha512-IHe6qj8pYzdf5Cuedoo3rIi5qs3ZAr+oa+u7m2Uh2MgZ6bcR6fUOtGaQBT+E0XgNycsz1jQijczqTQ4cujISsw==}
     peerDependencies:
       eslint: 10.8.0
 
@@ -1650,7 +1650,7 @@ packages:
 
 snapshots:
 
-  '@book000/eslint-config@1.16.23(eslint@10.8.0)(typescript@6.0.3)':
+  '@book000/eslint-config@1.16.24(eslint@10.8.0)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.65.0(eslint@10.8.0)(typescript@6.0.3)
       eslint: 10.8.0
