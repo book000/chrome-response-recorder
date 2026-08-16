@@ -7,7 +7,7 @@
     "url": "https://github.com/book000/chrome-response-recorder/issues"
   },
   "dependencies": {
-    "puppeteer-core": "25.6.0",
+    "puppeteer-core": "25.7.0",
     "tsx": "4.23.12",
     "otplib": "13.4.1"
   },
