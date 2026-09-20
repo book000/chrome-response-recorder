@@ -306,30 +306,32 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
  */
 async function cleanupPage(page: Page) {
   const cleanupFunctions = pageEventListeners.get(page)
-  if (cleanupFunctions) {
-    const pendingCleanup: Promise<void>[] = []
-    for (const cleanup of cleanupFunctions) {
-      try {
-        const result = cleanup()
-        if (result instanceof Promise) {
-          pendingCleanup.push(
-            (async () => {
-              try {
-                await result
-              } catch (error) {
-                console.error('Error during page cleanup:', error)
-              }
-            })()
-          )
-        }
-      } catch (error) {
-        console.error('Error during page cleanup:', error)
+  if (!cleanupFunctions) {
+    return
+  }
+
+  const pendingCleanup: Promise<void>[] = []
+  for (const cleanup of cleanupFunctions) {
+    try {
+      const result = cleanup()
+      if (result instanceof Promise) {
+        pendingCleanup.push(
+          (async () => {
+            try {
+              await result
+            } catch (error) {
+              console.error('Error during page cleanup:', error)
+            }
+          })()
+        )
       }
+    } catch (error) {
+      console.error('Error during page cleanup:', error)
     }
-    pageEventListeners.delete(page)
-    if (pendingCleanup.length > 0) {
-      await Promise.all(pendingCleanup)
-    }
+  }
+  pageEventListeners.delete(page)
+  if (pendingCleanup.length > 0) {
+    await Promise.all(pendingCleanup)
   }
 }
 
