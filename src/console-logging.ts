@@ -99,9 +99,8 @@ export class ConsoleLogging {
       return
     }
 
-    const runtimeEvent = event as Protocol.Runtime.ConsoleAPICalledEvent
-
-    const { type, args, stackTrace } = runtimeEvent
+    const { type, args, stackTrace } =
+      event as Protocol.Runtime.ConsoleAPICalledEvent
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     const message = args.map((arg) => arg.value).join(' ')
     this.logMessage('consoleApiCalled', type, message, {
