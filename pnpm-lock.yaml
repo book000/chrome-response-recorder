@@ -177,8 +177,8 @@ importers:
         version: 4.23.15
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.16.96
-        version: 1.16.96(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+        specifier: 1.16.98
+        version: 1.16.98(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -209,8 +209,8 @@ importers:
 
 packages:
 
-  '@book000/eslint-config@1.16.96':
-    resolution: {integrity: sha512-AbQlTAVDa8T9PRwG997F9wWPMgwU6G2wIPHL5Iy+MHCIb8nJEbpKmclk4ShTmlgyysCoPNBlEIv+OueGFCXn0Q==}
+  '@book000/eslint-config@1.16.98':
+    resolution: {integrity: sha512-4AxpUume/5Tj+31e3HqJxQKjcTuc6mTNXSk0u6NKoVgFDIrZdqubF3LAEgxJtuD2YNvZPb3WTuVdmUjbrkJwpA==}
     peerDependencies:
       eslint: 10.12.0
 
@@ -1403,8 +1403,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  neostandard@0.14.0:
-    resolution: {integrity: sha512-11ZZgQdQrzdMqAo494FJzrSh5/lNtUyrx1mz7BVXcA9EpXCEBOz4WhVz5sG79VvoBG/4L5lZ8xjfHxng95CtFQ==}
+  neostandard@0.14.1:
+    resolution: {integrity: sha512-cEGi7ADMWJRTcdsZeDXCyA1ZeJLQPBq6HP9z9CE1ysu+CJOKYt59ADG0BT6ETonuF6xNXZbMiNc8S8prYys4aQ==}
     engines: {node: ^22.13.0 || >=24}
     hasBin: true
     peerDependencies:
@@ -1841,14 +1841,14 @@ packages:
 
 snapshots:
 
-  '@book000/eslint-config@1.16.96(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)':
+  '@book000/eslint-config@1.16.98(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.71.2(eslint@10.12.0)(typescript@6.0.3)
       eslint: 10.12.0
       eslint-config-prettier: 10.1.8(eslint@10.12.0)
       eslint-plugin-unicorn: 78.0.0(eslint@10.12.0)(typescript@6.0.3)
       globals: 17.13.0
-      neostandard: 0.14.0(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
+      neostandard: 0.14.1(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3)
       typescript-eslint: 8.71.2(eslint@10.12.0)(typescript@6.0.3)
     transitivePeerDependencies:
       - supports-color
@@ -3196,7 +3196,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  neostandard@0.14.0(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3):
+  neostandard@0.14.1(eslint@10.12.0)(ts-declaration-location@1.0.7(typescript@6.0.3))(typescript@6.0.3):
     dependencies:
       '@humanwhocodes/gitignore-to-minimatch': 1.0.2
       '@stylistic/eslint-plugin': 5.10.0(eslint@10.12.0)
