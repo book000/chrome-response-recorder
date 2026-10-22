@@ -93,6 +93,9 @@ pnpm dev
 # 本番実行
 pnpm start
 
+# テスト（node:test）
+pnpm test
+
 # Lint チェック（Prettier + ESLint + TypeScript 型チェック）
 pnpm lint
 
@@ -114,6 +117,8 @@ pnpm fix
 | ファイル | 目的 |
 |---------|------|
 | `src/main.ts` | Puppeteer ブラウザ初期化、イベントリスナー登録、HTTP レスポンス監視、グレースフルシャットダウン |
+| `src/response-directory.ts` | 応答の保存先ディレクトリを排他的に作成し、同一ミリ秒の衝突時は連番サフィックスで一意にする |
+| `src/response-directory.test.ts` | `createResponseDirectory` の回帰テスト（固定 timestamp での一意性・並行処理・内容の取り違えなし） |
 | `src/console-logging.ts` | ブラウザコンソール出力を JSONL 形式で記録（ページ毎のタイムスタンプ付きログディレクトリ） |
 | `src/addon/index.ts` | BaseAddon 抽象クラス定義 |
 | `src/addon/twitter-login.ts` | Twitter ログインフロー自動化（セレクタベースの要素待機・入力） |
@@ -125,6 +130,8 @@ pnpm fix
 src/
 ├── main.ts                 # エントリーポイント
 ├── console-logging.ts      # コンソールログ記録
+├── response-directory.ts   # 応答保存先ディレクトリの排他的作成
+├── response-directory.test.ts # 上記の回帰テスト
 └── addon/                  # アドオンシステム
     ├── index.ts            # BaseAddon 抽象クラス
     ├── twitter-login.ts    # Twitter 自動ログイン
@@ -200,7 +207,7 @@ src/
 
 ### テスト方針
 
-- **テストフレームワーク**: 未実装（package.json に test スクリプトなし）
+- **テストフレームワーク**: Node.js 組み込みの `node:test` を `tsx` 経由で実行（`pnpm test`）。現在は `src/response-directory.test.ts`（応答保存先ディレクトリの一意性）のみ
 - **品質保証方法**:
   - Lint（ESLint + Prettier）によるコード品質管理
   - TypeScript 型チェック（strict mode）
@@ -310,7 +317,7 @@ src/
 
 ### 保存ディレクトリ構造
 
-- **レスポンス**: `/responses/{domain}/{path}/{method}/{timestamp}/`
+- **レスポンス**: `/responses/{domain}/{path}/{method}/{timestamp}/`（同一ミリ秒に同じドメイン・パス・メソッド（クエリ文字列は除く）の応答が複数ある場合は `{timestamp}-1/`、`{timestamp}-2/` … と連番を付けて一意にする）
   - `detail.json` - レスポンスメタデータ（ステータス、ヘッダ、タイミング）
   - `data.raw` - レスポンスボディ（バイナリ）
 - **コンソールログ**: `{CONSOLE_LOG_DIR}/{domain}/{path}/{timestamp}.jsonl`

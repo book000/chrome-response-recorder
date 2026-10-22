@@ -11,6 +11,7 @@ import { BaseAddon } from './addon'
 import { TwitterLoginAddon } from './addon/twitter-login'
 import { ConsoleLogging } from './console-logging'
 import { ExportCookieAddon } from './addon/export-cookie'
+import { createResponseDirectory } from './response-directory'
 
 /**
  * 環境変数から取得する設定値
@@ -115,17 +116,17 @@ async function responseHandler(response: HTTPResponse) {
   // レスポンスデータを構造化されたディレクトリに保存
   // 保存形式: /responses/{domain}/{path}/{method}/{timestamp}/
   // 例: /responses/example.com/api/v1/users/GET/1700000000000/
+  // 同一ミリ秒に同じドメイン・パス・メソッドの応答が重なると連番が付く（createResponseDirectory 参照）
   const urlObj = new URL(url)
   const domain = urlObj.hostname
   const pathname = urlObj.pathname.replace(/^\//, '') // パスの先頭のスラッシュを削除
   const path = pathname || '__root__' // パスが空の場合は '__root__' とする
   const timestamp = Date.now()
-  const directory = `/responses/${domain}/${path}/${method}/${timestamp}/`
 
-  // ディレクトリが存在しない場合は作成
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true })
-  }
+  const directory = createResponseDirectory(
+    `/responses/${domain}/${path}/${method}`,
+    timestamp
+  )
 
   const detailFilePath = `${directory}detail.json`
   const dataFilePath = `${directory}data.raw`
