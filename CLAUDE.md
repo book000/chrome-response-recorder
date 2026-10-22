@@ -317,7 +317,7 @@ src/
 
 ### 保存ディレクトリ構造
 
-- **レスポンス**: `/responses/{domain}/{path}/{method}/{timestamp}/`（同一ミリ秒に同じ URL・メソッドの応答が複数ある場合は `{timestamp}-1/`、`{timestamp}-2/` … と連番を付けて一意にする）
+- **レスポンス**: `/responses/{domain}/{path}/{method}/{timestamp}/`（同一ミリ秒に同じドメイン・パス・メソッド（クエリ文字列は除く）の応答が複数ある場合は `{timestamp}-1/`、`{timestamp}-2/` … と連番を付けて一意にする）
   - `detail.json` - レスポンスメタデータ（ステータス、ヘッダ、タイミング）
   - `data.raw` - レスポンスボディ（バイナリ）
 - **コンソールログ**: `{CONSOLE_LOG_DIR}/{domain}/{path}/{timestamp}.jsonl`

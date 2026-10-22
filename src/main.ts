@@ -116,15 +116,13 @@ async function responseHandler(response: HTTPResponse) {
   // レスポンスデータを構造化されたディレクトリに保存
   // 保存形式: /responses/{domain}/{path}/{method}/{timestamp}/
   // 例: /responses/example.com/api/v1/users/GET/1700000000000/
-  // 同一ミリ秒に同じ URL・メソッドの応答が複数ある場合は、
-  // {timestamp}-1, {timestamp}-2 のように連番を付けて保存先を一意にする
+  // 同一ミリ秒に同じドメイン・パス・メソッドの応答が重なると連番が付く（createResponseDirectory 参照）
   const urlObj = new URL(url)
   const domain = urlObj.hostname
   const pathname = urlObj.pathname.replace(/^\//, '') // パスの先頭のスラッシュを削除
   const path = pathname || '__root__' // パスが空の場合は '__root__' とする
   const timestamp = Date.now()
 
-  // ディレクトリを排他的に作成（他の応答と同じディレクトリを共有しない）
   const directory = createResponseDirectory(
     `/responses/${domain}/${path}/${method}`,
     timestamp

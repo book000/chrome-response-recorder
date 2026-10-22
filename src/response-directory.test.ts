@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it, mock } from 'node:test'
 import { createResponseDirectory } from './response-directory'
 
 /** 固定するタイムスタンプ（ミリ秒） */
@@ -23,10 +23,13 @@ describe('createResponseDirectory', () => {
     fs.rmSync(rootDirectory, { recursive: true, force: true })
   })
 
-  it('単発応答は従来と同じ {timestamp}/ のパスに作成する', () => {
+  /** 作成されるディレクトリのパス（OS のパス区切りに依存せず、末尾にスラッシュを含む） */
+  const expectedPath = (name: string) => `${path.join(baseDirectory, name)}/`
+
+  it('衝突しない単発応答は {timestamp}/ のパスに作成する', () => {
     const directory = createResponseDirectory(baseDirectory, TIMESTAMP)
 
-    assert.equal(directory, `${baseDirectory}/${TIMESTAMP}/`)
+    assert.equal(directory, expectedPath(String(TIMESTAMP)))
     assert.ok(fs.statSync(directory).isDirectory())
   })
 
@@ -38,9 +41,9 @@ describe('createResponseDirectory', () => {
     ]
 
     assert.deepEqual(directories, [
-      `${baseDirectory}/${TIMESTAMP}/`,
-      `${baseDirectory}/${TIMESTAMP}-1/`,
-      `${baseDirectory}/${TIMESTAMP}-2/`,
+      expectedPath(String(TIMESTAMP)),
+      expectedPath(`${TIMESTAMP}-1`),
+      expectedPath(`${TIMESTAMP}-2`),
     ])
   })
 
@@ -88,11 +91,27 @@ describe('createResponseDirectory', () => {
     }
   })
 
-  it('EEXIST 以外のエラーはそのまま送出する', () => {
-    // 親ディレクトリのパスにファイルが存在すると mkdir が ENOTDIR で失敗する
-    fs.mkdirSync(path.dirname(baseDirectory), { recursive: true })
-    fs.writeFileSync(baseDirectory, '')
+  it('EEXIST 以外のエラーは再試行せずそのまま送出する', () => {
+    // 親の再帰作成は実処理に委譲し、末端の作成だけを EACCES で失敗させる
+    const originalMkdirSync = fs.mkdirSync
+    const mkdirMock = mock.method(fs, 'mkdirSync', ((
+      target: fs.PathLike,
+      options?: fs.MakeDirectoryOptions
+    ) => {
+      if (options?.recursive) {
+        return originalMkdirSync(target, options)
+      }
+      throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+    }) as typeof fs.mkdirSync)
 
-    assert.throws(() => createResponseDirectory(baseDirectory, TIMESTAMP))
+    try {
+      assert.throws(() => createResponseDirectory(baseDirectory, TIMESTAMP), {
+        code: 'EACCES',
+      })
+      // 親の再帰作成 1 回と末端の作成 1 回のみで、連番を進めて再試行しない
+      assert.equal(mkdirMock.mock.callCount(), 2)
+    } finally {
+      mkdirMock.mock.restore()
+    }
   })
 })
