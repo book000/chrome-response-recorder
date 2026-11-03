@@ -1,9 +1,9 @@
-FROM node:24-alpine AS deps
+FROM node:26-alpine AS deps
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME/bin:$PATH"
 
-RUN corepack enable
+RUN npm install -g corepack && corepack enable
 
 WORKDIR /app
 
