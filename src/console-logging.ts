@@ -7,7 +7,7 @@ import { dirname } from 'node:path'
  * Records a page's console output, page errors, failed requests and CDP `Runtime.consoleAPICalled` events
  * as JSON Lines under `{logDirectory}/{domain}/{path}/{timestamp}.jsonl`.
  * `{domain}` and `{path}` come from the page URL at the time of each event;
- * `{timestamp}` is when this instance was created, so one page load writes to one file per URL.
+ * `{timestamp}` is when this instance was created (once per tab), so every page load in the tab appends to the same file for a given URL.
  */
 export class ConsoleLogging {
   private page: Page

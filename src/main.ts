@@ -324,8 +324,9 @@ async function cleanupPage(page: Page) {
 }
 
 /**
- * Releases resources (restart timer, page and browser listeners, browser) and then throws,
- * which ends the process. Also used for the periodic restart, where supervisord starts the process again.
+ * Releases resources (restart timer, page and browser listeners, browser) and then throws.
+ * Callers run it in an unawaited async IIFE and rethrow, so the rejection is unhandled and Node exits the process (there is no `unhandledRejection` handler).
+ * Also used for the periodic restart, where supervisord starts the process again.
  * @param signal - Name of the signal or reason that triggered the shutdown
  * @param browser - Browser instance
  * @param restartIntervalId - ID of the restart timer

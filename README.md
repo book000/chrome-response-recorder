@@ -22,7 +22,9 @@ Runs a visible Chromium (driven by Puppeteer) inside a Docker container and reco
 | `./downloads` | `/root/Downloads` | Browser downloads |
 | `./extension` | `/extension` | Mounted read-only, but nothing in this repository loads it |
 
-The sample `compose.yaml` publishes only port 8080 (noVNC). x11vnc listens on 5900 inside the container but runs without a password (`-nopw`), so do not expose either port to an untrusted network.
+The sample `compose.yaml` publishes only port 8080 (noVNC). x11vnc listens on 5900 inside the container but runs without a password (`-nopw`), so do not expose either port to an untrusted network. To keep noVNC local to the host, publish it as `127.0.0.1:8080:8080`.
+
+`compose.yaml` also pins `STARTUP_URLS`, `TARGET_URL_REGEXS`, `VNC_SCREEN_SIZE` and `ACTIVE_ADDONS` under `environment:`, which takes precedence over `.env`. Remove or edit those keys in `compose.yaml` to use your own values. Its `ACTIVE_ADDONS: Twitter` matches no addon name (see [Addons](#addons)), so no addon is enabled until you set `TwitterLogin` and/or `ExportCookie`.
 
 The `Docker` workflow builds the image with `book000/templates` and targets `ghcr.io/book000/chrome-response-recorder`.
 
@@ -80,6 +82,7 @@ Saved under the fixed path `/responses` inside the container:
 - `{path}` is the URL path without the leading slash, or `__root__` for an empty path. The query string is not part of the path.
 - `{timestamp}` is `Date.now()` in milliseconds. If a directory for the same domain, path, method and millisecond already exists, a numeric suffix is added: `{timestamp}-1`, `{timestamp}-2`, and so on.
 - CORS preflight (`OPTIONS`) requests are ignored.
+- `detail.json` can contain cookies, authorization headers and request bodies, so treat the responses directory as sensitive.
 
 ### Console logs
 

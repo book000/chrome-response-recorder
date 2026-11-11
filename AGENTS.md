@@ -32,7 +32,7 @@ Run `pnpm lint` and `pnpm test` before committing. Node.js is pinned in `.node-v
 - `src/response-directory.ts`: exclusive creation of the per-response directory (numeric suffix on same-millisecond collisions); tested in `src/response-directory.test.ts`
 - `src/console-logging.ts`: `ConsoleLogging`, JSONL console logs
 - `src/addon/`: `BaseAddon` (`index.ts`), `TwitterLoginAddon`, `ExportCookieAddon`
-- `Dockerfile`, `entrypoint.sh`, `supervisord.conf`, `compose.yaml`: container setup
+- `Dockerfile`, `entrypoint.sh`, `supervisord.conf`, `compose.yaml`: container setup (base image `zenika/alpine-chrome:with-puppeteer-xvfb`; supervisord runs `xvfb`, `x11vnc`, `novnc` on 8080 and `app`)
 
 ## Conventions
 
