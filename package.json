@@ -1,6 +1,6 @@
 {
   "name": "chrome-response-recorder",
-  "description": "",
+  "description": "Records HTTP responses and console logs from a Chromium browser driven by Puppeteer, in Docker with VNC",
   "version": "0.0.0",
   "author": "Tomachi <tomachi@tomacheese.com>",
   "bugs": {

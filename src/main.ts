@@ -13,60 +13,57 @@ import { ConsoleLogging } from './console-logging'
 import { ExportCookieAddon } from './addon/export-cookie'
 import { createResponseDirectory } from './response-directory'
 
-/**
- * 環境変数から取得する設定値
- * 各種設定項目をまとめて管理
- */
+/** Settings read from environment variables. */
 const ENVIRONMENT = {
-  /** VNCスクリーンサイズ（幅x高さ） */
+  /** Screen size as `{width}x{height}`. */
   VNC_SCREEN_SIZE: process.env.VNC_SCREEN_SIZE ?? '1024x768',
-  /** Chromiumブラウザの実行ファイルパス */
+  /** Path to the Chromium executable. */
   CHROMIUM_PATH: process.env.CHROMIUM_PATH ?? '/usr/bin/chromium-browser',
-  /** ブラウザのユーザーデータディレクトリ */
+  /** Browser user data directory (profile). */
   USER_DATA_DIR: process.env.VNC_USER_DATA_DIR ?? '/userdata',
-  /** ブラウザのUser-Agent文字列 */
+  /** Browser User-Agent string. */
   BROWSER_USER_AGENT:
     process.env.BROWSER_USER_AGENT ??
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
-  /** 監視対象URLの正規表現リスト */
+  /** Regular expressions (comma- or newline-separated) for URLs whose responses are recorded. When empty, nothing is recorded. */
   TARGET_URL_REGEXS: process.env.TARGET_URL_REGEXS
     ? process.env.TARGET_URL_REGEXS.split(/[,\n]/).map(
         (regex) => new RegExp(regex.trim())
       )
     : [],
-  /** 起動時に開くURLのリスト（カンマ区切り） */
+  /** Comma-separated URLs to open at startup. */
   STARTUP_URLS: process.env.STARTUP_URLS ?? '',
-  /** ブラウザの自動再起動間隔（秒）。0の場合は再起動しない */
+  /** Interval in seconds after which the process shuts down so that supervisord restarts it. 0 disables it. */
   RESTART_INTERVAL_SECONDS: Number(process.env.RESTART_INTERVAL_SECONDS) || 0,
-  /** ビューポートの幅（ピクセル）。未指定の場合はVNC_SCREEN_SIZEの幅を使用 */
+  /** Viewport width in pixels. Defaults to the width of VNC_SCREEN_SIZE. */
   VIEWPORT_WIDTH: process.env.VIEWPORT_WIDTH
     ? Number(process.env.VIEWPORT_WIDTH)
     : null,
-  /** ビューポートの高さ（ピクセル）。未指定の場合はVNC_SCREEN_SIZEの高さを使用 */
+  /** Viewport height in pixels. Defaults to the height of VNC_SCREEN_SIZE. */
   VIEWPORT_HEIGHT: process.env.VIEWPORT_HEIGHT
     ? Number(process.env.VIEWPORT_HEIGHT)
     : null,
-  /** 有効なアドオンのリスト */
+  /** Comma-separated names of the addons to enable (case-insensitive). */
   ACTIVE_ADDONS: process.env.ACTIVE_ADDONS
     ? process.env.ACTIVE_ADDONS.split(',').map((addon) => addon.trim())
     : [],
-  /** Twitterのユーザー名 */
+  /** Twitter username (TwitterLogin addon). */
   TWITTER_USERNAME: process.env.TWITTER_USERNAME,
-  /** Twitterのパスワード */
+  /** Twitter password (TwitterLogin addon). */
   TWITTER_PASSWORD: process.env.TWITTER_PASSWORD,
-  /** Twitterのメールアドレス */
+  /** Twitter email address, used when the login flow asks for it (TwitterLogin addon). */
   TWITTER_EMAIL_ADDRESS: process.env.TWITTER_EMAIL_ADDRESS,
-  /** TwitterのOTPシークレット */
+  /** Twitter OTP secret, used when the login flow asks for a code (TwitterLogin addon). */
   TWITTER_OTP_SECRET: process.env.TWITTER_OTP_SECRET,
-  /** Cookieをエクスポートするファイルパス */
+  /** File path the ExportCookie addon writes cookies to. */
   EXPORT_COOKIE_FILE_PATH: process.env.EXPORT_COOKIE_FILE_PATH,
-  /** 開発ツールを自動で開くかどうか */
+  /** Whether to open DevTools automatically for each tab. */
   IS_OPEN_DEV_TOOLS: process.env.OPEN_DEVTOOLS === 'true',
-  /** コンソールログの出力ディレクトリ */
+  /** Output directory for browser console logs. When unset, console logging is skipped. */
   CONSOLE_LOG_DIR: process.env.CONSOLE_LOG_DIR,
 } as const
 
-// ページごとにイベントリスナーを管理するためのWeakMap
+// Per-page cleanup functions, keyed weakly so closed pages can be garbage collected
 const pageEventListeners = new WeakMap<Page, Set<() => void | Promise<void>>>()
 
 function appendPageCleanup(
@@ -84,10 +81,9 @@ function appendPageCleanup(
   pageEventListeners.set(page, new Set(cleanup))
 }
 
-// レスポンスハンドラーを外部スコープに移動
 /**
- * HTTPレスポンスを処理し、条件に合致するレスポンスをファイルシステムに保存する
- * @param response - Puppeteerから受信したHTTPResponse
+ * Saves the response to `/responses` when its URL matches TARGET_URL_REGEXS. Preflight (OPTIONS) requests are ignored.
+ * @param response - HTTP response received from Puppeteer
  */
 async function responseHandler(response: HTTPResponse) {
   const url = response.url()
@@ -95,7 +91,6 @@ async function responseHandler(response: HTTPResponse) {
   const statusText = response.statusText()
   const method = response.request().method()
 
-  // URLが監視対象の正規表現にマッチするかチェック
   const isTargetUrl = ENVIRONMENT.TARGET_URL_REGEXS.some((regex) =>
     regex.test(url)
   )
@@ -103,7 +98,7 @@ async function responseHandler(response: HTTPResponse) {
     return
   }
 
-  // preflightリクエスト（CORS）は無視する
+  // Ignore CORS preflight requests
   if (response.request().method() === 'OPTIONS') {
     console.log(`Ignoring preflight request: ${url}`)
     return
@@ -113,14 +108,13 @@ async function responseHandler(response: HTTPResponse) {
     `Response received: ${method} ${url} - Status: ${status} ${statusText}`
   )
 
-  // レスポンスデータを構造化されたディレクトリに保存
-  // 保存形式: /responses/{domain}/{path}/{method}/{timestamp}/
-  // 例: /responses/example.com/api/v1/users/GET/1700000000000/
-  // 同一ミリ秒に同じドメイン・パス・メソッドの応答が重なると連番が付く（createResponseDirectory 参照）
+  // Layout: /responses/{domain}/{path}/{method}/{timestamp}/
+  // e.g. /responses/example.com/api/v1/users/GET/1700000000000/
+  // Responses for the same domain, path and method within the same millisecond get a numeric suffix (see createResponseDirectory)
   const urlObj = new URL(url)
   const domain = urlObj.hostname
-  const pathname = urlObj.pathname.replace(/^\//, '') // パスの先頭のスラッシュを削除
-  const path = pathname || '__root__' // パスが空の場合は '__root__' とする
+  const pathname = urlObj.pathname.replace(/^\//, '') // strip the leading slash
+  const path = pathname || '__root__' // use '__root__' for an empty path
   const timestamp = Date.now()
 
   const directory = createResponseDirectory(
@@ -131,7 +125,6 @@ async function responseHandler(response: HTTPResponse) {
   const detailFilePath = `${directory}detail.json`
   const dataFilePath = `${directory}data.raw`
 
-  // レスポンスの詳細情報をまとめる
   const postData = await response.request().fetchPostData()
 
   const responseData = {
@@ -147,7 +140,7 @@ async function responseHandler(response: HTTPResponse) {
     },
   }
 
-  // レスポンスの詳細情報を detail.json に保存
+  // detail.json: response metadata
   try {
     fs.writeFileSync(
       detailFilePath,
@@ -159,7 +152,7 @@ async function responseHandler(response: HTTPResponse) {
     return
   }
 
-  // レスポンスボディのバイナリデータを data.raw に保存
+  // data.raw: response body
   try {
     const buffer = await response.buffer()
 
@@ -167,7 +160,7 @@ async function responseHandler(response: HTTPResponse) {
       const writeStream = fs.createWriteStream(dataFilePath)
       let isSettled = false
 
-      // ストリームのクリーンアップ処理
+      // Settle the promise exactly once (error, finish, close and timeout can all fire)
       const cleanup = (error?: Error) => {
         if (isSettled) {
           return
@@ -183,11 +176,11 @@ async function responseHandler(response: HTTPResponse) {
         }
       }
 
-      // タイムアウトを設定してストリームの書き込みを制限（30秒）
+      // Give up if the write does not finish within 30 seconds
       const timeout = setTimeout(() => {
         console.error(`Timeout writing response data: ${dataFilePath}`)
         cleanup(new Error('Write stream timeout'))
-      }, 30_000) // 30秒のタイムアウト
+      }, 30_000)
 
       writeStream.on('error', (error) => {
         const normalizedError =
@@ -216,12 +209,11 @@ async function responseHandler(response: HTTPResponse) {
 }
 
 /**
- * レスポンスイベントハンドラー
- * responseHandler を呼び出し、エラーをキャッチしてログに出力
- * @param response - HTTP レスポンスオブジェクト
+ * `response` event listener. Runs responseHandler and logs any error instead of letting it propagate.
+ * @param response - HTTP response
  */
 function responseEventHandler(response: HTTPResponse) {
-  // Page.onはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+  // Page.on expects a void listener, so the async work is started without awaiting it
   ;(async () => {
     try {
       await responseHandler(response)
@@ -233,40 +225,35 @@ function responseEventHandler(response: HTTPResponse) {
   })()
 }
 
-// ページクローズハンドラー
 /**
- * ページが閉じられた時のイベントリスナークリーンアップハンドラーを作成
- * @param page - 対象のページオブジェクト
- * @returns クリーンアップ処理を行う関数
+ * Creates the `close` listener that detaches the page's response and close listeners.
+ * @param page - Target page
+ * @param responseListener - Response listener to detach
+ * @returns The close listener
  */
 function createCloseHandler(
   page: Page,
   responseListener: (response: HTTPResponse) => void
 ) {
   return function closeHandler() {
-    // イベントリスナーを削除
     page.off('response', responseListener)
     page.off('close', closeHandler)
-    // WeakMapから削除（ガベージコレクションを促進）
     pageEventListeners.delete(page)
     console.log(`Cleaned up event listeners for page: ${page.url()}`)
   }
 }
 
 /**
- * ページにレスポンス監視リスナーを登録する
- * @param page - 監視対象のページ
+ * Registers the response listener on a page and schedules its removal when the page closes or is cleaned up.
+ * @param page - Page to monitor
  */
 function registerResponseListener(page: Page) {
-  // レスポンスイベントリスナーを登録
   page.on('response', responseEventHandler)
 
-  // ページが閉じられた時のクリーンアップ処理
   const closeHandler = createCloseHandler(page, responseEventHandler)
 
   page.on('close', closeHandler)
 
-  // クリーンアップ関数をWeakMapに保存（メモリリーク防止）
   appendPageCleanup(page, () => {
     page.off('response', responseEventHandler)
     page.off('close', closeHandler)
@@ -274,10 +261,10 @@ function registerResponseListener(page: Page) {
 }
 
 /**
- * アドオンをページに登録する
+ * Registers addons on a page and schedules their unregistration. A failing addon is logged and skipped.
  *
- * @param addons - 登録するアドオンの配列
- * @param page - 対象のページオブジェクト
+ * @param addons - Addons to register
+ * @param page - Target page
  */
 async function registerAddons(addons: BaseAddon[], page: Page) {
   for (const addon of addons) {
@@ -302,8 +289,8 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
 }
 
 /**
- * ページのイベントリスナーを手動でクリーンアップする
- * @param page - クリーンアップ対象のページ
+ * Runs and clears all cleanup functions registered for a page.
+ * @param page - Page to clean up
  */
 async function cleanupPage(page: Page) {
   const cleanupFunctions = pageEventListeners.get(page)
@@ -337,12 +324,14 @@ async function cleanupPage(page: Page) {
 }
 
 /**
- * グレースフルシャットダウン処理
- * プロセス終了シグナルを受信した際に、リソースを適切にクリーンアップしてから終了する
- * @param signal - 受信したシグナル名
- * @param browser - ブラウザインスタンス
- * @param restartIntervalId - 再起動タイマーのID
- * @param browserEventListeners - ブラウザのイベントリスナークリーンアップ関数配列
+ * Releases resources (restart timer, page and browser listeners, browser) and then throws.
+ * Callers run it in an unawaited async IIFE and rethrow, so the rejection is unhandled and Node exits the process (there is no `unhandledRejection` handler).
+ * Also used for the periodic restart, where supervisord starts the process again.
+ * @param signal - Name of the signal or reason that triggered the shutdown
+ * @param browser - Browser instance
+ * @param restartIntervalId - ID of the restart timer
+ * @param browserEventListeners - Functions that detach the browser-level listeners
+ * @throws Always throws `Process terminated by {signal}` after cleanup
  */
 async function gracefulShutdown(
   signal: string,
@@ -352,12 +341,10 @@ async function gracefulShutdown(
 ) {
   console.log(`${signal} received. Shutting down gracefully...`)
 
-  // インターバルタイマーをクリア
   if (restartIntervalId) {
     clearInterval(restartIntervalId)
   }
 
-  // すべてのページのイベントリスナーをクリーンアップ
   try {
     const pages = await browser.pages()
     for (const page of pages) {
@@ -367,12 +354,10 @@ async function gracefulShutdown(
     console.error('Error cleaning up pages:', error)
   }
 
-  // ブラウザのイベントリスナーをクリーンアップ
   for (const cleanup of browserEventListeners) {
     cleanup()
   }
 
-  // ブラウザを閉じる
   try {
     await browser.close()
     console.log('Browser closed successfully.')
@@ -384,17 +369,18 @@ async function gracefulShutdown(
 }
 
 /**
- * 新しいターゲット（タブ）が作成された時のハンドラーを生成
- * @returns ターゲット作成イベントハンドラー
+ * Creates the `targetcreated` listener that sets up response recording, console logging and addons for each new tab.
+ * @param addons - Addons to register on the new page
+ * @returns The `targetcreated` listener
  */
 function createTargetCreatedHandler(addons: BaseAddon[]) {
   return (target: Target) => {
     console.log(`New target created: ${target.url()}`)
-    // ページタイプのターゲットのみ処理
+    // Only page targets (tabs)
     if (target.type() !== TargetType.PAGE) {
       return
     }
-    // targetcreatedはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    // targetcreated expects a void listener, so the async work is started without awaiting it
     ;(async () => {
       try {
         const page = await target.page()
@@ -403,14 +389,12 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
         }
 
         console.log(`New page opened: ${page.url()}`)
-        // 新しいページにレスポンス監視リスナーを登録
         registerResponseListener(page)
-        // コンソールロギングのハンドラーを登録
         const consoleLogging = new ConsoleLogging(
           page,
           ENVIRONMENT.CONSOLE_LOG_DIR
         )
-        // コンソールロギングの開始とアドオン登録は互いを待たず並行実行する
+        // Console logging and addon registration run concurrently
         ;(async () => {
           try {
             await consoleLogging.start()
@@ -436,11 +420,11 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
 }
 
 /**
- * ブラウザ切断時のハンドラーを生成
- * @param browser - ブラウザインスタンス
- * @param restartIntervalId - 再起動タイマーのID
- * @param browserEventListeners - ブラウザのイベントリスナークリーンアップ関数配列
- * @returns ブラウザ切断イベントハンドラー
+ * Creates the `disconnected` listener that shuts the process down when the browser goes away.
+ * @param browser - Browser instance
+ * @param restartIntervalId - ID of the restart timer
+ * @param browserEventListeners - Functions that detach the browser-level listeners
+ * @returns The `disconnected` listener
  */
 function createDisconnectedHandler(
   browser: Browser,
@@ -449,7 +433,7 @@ function createDisconnectedHandler(
 ) {
   return () => {
     console.log('Browser disconnected. Exiting process...')
-    // disconnectedはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    // disconnected expects a void listener, so the async work is started without awaiting it
     ;(async () => {
       try {
         await gracefulShutdown(
@@ -467,7 +451,8 @@ function createDisconnectedHandler(
 }
 
 /**
- * Chrome の Preferences ファイルにある exit_type を設定する関数
+ * Sets `exit_type` to `normal` in Chrome's Preferences file so that the "restore pages" prompt
+ * does not appear after the browser was killed. Does nothing if the file does not exist.
  */
 function setPreferenceExitType() {
   const preferencesPath = path.join(
@@ -483,7 +468,7 @@ function setPreferenceExitType() {
   try {
     const preferences: {
       exit_type: string
-      [key: string]: any // その他のプロパティを許容
+      [key: string]: any // keep unknown properties
     } = JSON.parse(fs.readFileSync(preferencesPath, 'utf8'))
     preferences.exit_type = 'normal'
     fs.writeFileSync(
@@ -498,11 +483,9 @@ function setPreferenceExitType() {
 }
 
 /**
- * メイン処理
- * Puppeteerを使用してブラウザを起動し、レスポンス監視を開始する
+ * Launches the browser, registers the listeners and addons, and opens the startup URLs.
  */
 async function main() {
-  // 画面サイズとブラウザパスの設定
   const [width, height] = ENVIRONMENT.VNC_SCREEN_SIZE.split('x').map(Number)
   const executablePath = ENVIRONMENT.CHROMIUM_PATH
 
@@ -514,18 +497,18 @@ async function main() {
     `Target URL regexes: ${ENVIRONMENT.TARGET_URL_REGEXS.map((regex) => regex.toString()).join(', ')}`
   )
 
-  // Puppeteerの起動引数設定
+  // Chromium launch arguments
   const puppeteerArguments = [
-    // コアセキュリティ・サンドボックス設定
+    // Sandbox (disabled: the browser runs as root inside the container)
     '--no-sandbox',
     '--disable-setuid-sandbox',
 
-    // メモリ最適化設定
+    // Memory
     '--disable-dev-shm-usage',
     '--disable-breakpad',
     '--disable-backing-store-limit',
 
-    // パフォーマンス設定
+    // Performance
     '--disable-accelerated-2d-canvas',
     '--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess',
     '--disable-notifications',
@@ -533,7 +516,7 @@ async function main() {
     '--use-gl=angle',
     '--use-angle=gl-egl',
 
-    // ブラウザの動作設定
+    // Browser behavior
     '--no-first-run',
     '--no-zygote',
     '--lang=ja',
@@ -546,7 +529,6 @@ async function main() {
     '--force-dark-mode',
   ]
 
-  // 開発ツールの自動オープン設定
   const isOpenDevTools = ENVIRONMENT.IS_OPEN_DEV_TOOLS
   if (isOpenDevTools) {
     puppeteerArguments.push('--auto-open-devtools-for-tabs')
@@ -554,31 +536,29 @@ async function main() {
 
   const userDataDirectory = ENVIRONMENT.USER_DATA_DIR
 
-  // ビューポートサイズの設定（環境変数で上書き可能）
   const viewportWidth = ENVIRONMENT.VIEWPORT_WIDTH ?? width
   const viewportHeight = ENVIRONMENT.VIEWPORT_HEIGHT ?? height
   console.log(`Viewport size: ${viewportWidth}x${viewportHeight}`)
 
-  // ユーザーデータディレクトリの存在確認と作成
   if (fs.existsSync(userDataDirectory)) {
     setPreferenceExitType()
   }
 
-  // Puppeteerブラウザインスタンスの起動
   const browser = await puppeteer.launch({
-    headless: false, // GUI表示モード
+    headless: false, // runs on the Xvfb display so it can be watched over VNC
     executablePath,
     channel: 'chrome',
     args: puppeteerArguments,
     userDataDir: userDataDirectory,
-    enableExtensions: true, // 拡張機能を有効化
+    enableExtensions: true,
     defaultViewport: {
       width: viewportWidth,
       height: viewportHeight,
     },
   })
 
-  // 有効アドオンのリスト
+  // All available addons. Every addon is constructed whether or not it is enabled,
+  // so ExportCookieAddon throws unless EXPORT_COOKIE_FILE_PATH is set
   const addons: BaseAddon[] = [
     new TwitterLoginAddon({
       username: ENVIRONMENT.TWITTER_USERNAME,
@@ -594,13 +574,11 @@ async function main() {
     ).includes(addon.name.toLocaleLowerCase())
   )
 
-  // リソースのクリーンアップを管理する
   let restartIntervalId: NodeJS.Timeout | null = null
   const browserEventListeners: (() => void)[] = []
 
-  // プロセス終了シグナルをリッスン
   process.on('SIGINT', () => {
-    // SIGINTはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    // process.on expects a void listener, so the async work is started without awaiting it
     ;(async () => {
       try {
         await gracefulShutdown(
@@ -616,7 +594,7 @@ async function main() {
     })()
   })
   process.on('SIGTERM', () => {
-    // SIGTERMはvoid返却のリスナーを期待するため、IIFEで意図的にawaitせず起動する
+    // process.on expects a void listener, so the async work is started without awaiting it
     ;(async () => {
       try {
         await gracefulShutdown(
@@ -632,13 +610,13 @@ async function main() {
     })()
   })
 
-  // 定期的なブラウザの再起動設定
+  // Periodic restart: shut down so that supervisord starts the process again
   if (ENVIRONMENT.RESTART_INTERVAL_SECONDS > 0) {
     restartIntervalId = setInterval(() => {
       console.log(
         `Restarting browser after ${ENVIRONMENT.RESTART_INTERVAL_SECONDS} seconds...`
       )
-      // setIntervalのコールバックはvoid返却を期待するため、IIFEで意図的にawaitせず起動する
+      // setInterval expects a void callback, so the async work is started without awaiting it
       ;(async () => {
         try {
           await gracefulShutdown(
@@ -655,16 +633,15 @@ async function main() {
     }, ENVIRONMENT.RESTART_INTERVAL_SECONDS * 1000)
   }
 
-  // 最初に存在するタブに対してレスポンス監視リスナーを登録
+  // Set up the tab that already exists at launch
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${initialPage.url()}`)
   registerResponseListener(initialPage)
-  // コンソールロギングのハンドラーを登録
   const consoleLogging = new ConsoleLogging(
     initialPage,
     ENVIRONMENT.CONSOLE_LOG_DIR
   )
-  // コンソールロギングの開始はアドオン登録を待たず並行実行する
+  // Console logging starts without waiting for addon registration
   ;(async () => {
     try {
       await consoleLogging.start()
@@ -674,10 +651,9 @@ async function main() {
       console.error('Error starting console logging:', error)
     }
   })()
-  // 初期ページに対してアドオンを登録
   await registerAddons(activeAddons, initialPage)
 
-  // 新しいタブが開いた際のイベントリスナー設定
+  // Handle tabs opened later
   const targetCreatedHandler = createTargetCreatedHandler(activeAddons)
 
   browser.on('targetcreated', targetCreatedHandler)
@@ -686,7 +662,6 @@ async function main() {
     browser.off('targetcreated', targetCreatedHandler)
   })
 
-  // ブラウザが切断された場合のハンドラー
   const disconnectedHandler = createDisconnectedHandler(
     browser,
     restartIntervalId,
@@ -699,8 +674,7 @@ async function main() {
     browser.off('disconnected', disconnectedHandler)
   })
 
-  // 起動時URLの処理
-  // 複数URLが指定されている場合、1つ目は既存タブで開き、残りは新しいタブで開く
+  // The first startup URL opens in the existing tab, the rest in new tabs
   const startupUrls = ENVIRONMENT.STARTUP_URLS.split(',').map((url) =>
     url.trim()
   )
@@ -709,7 +683,7 @@ async function main() {
     console.log(`Opening initial URL: ${firstUrl}`)
     try {
       await initialPage.goto(firstUrl, {
-        waitUntil: 'networkidle2', // ネットワークが安定するまで待機
+        waitUntil: 'networkidle2',
         timeout: 30_000,
       })
     } catch (error) {
@@ -717,18 +691,16 @@ async function main() {
     }
   }
 
-  // 残りのURLは新しいタブで開く
   for (const url of startupUrls.slice(1)) {
     console.log(`Opening additional URL in new tab: ${url}`)
     try {
       const newPage = await browser.newPage()
       registerResponseListener(newPage)
-      // コンソールロギングのハンドラーを登録
       const consoleLogging = new ConsoleLogging(
         newPage,
         ENVIRONMENT.CONSOLE_LOG_DIR
       )
-      // コンソールロギングの開始はアドオン登録を待たず並行実行する
+      // Console logging starts without waiting for addon registration
       ;(async () => {
         try {
           await consoleLogging.start()
@@ -749,10 +721,7 @@ async function main() {
   }
 }
 
-/**
- * アプリケーションエントリーポイント
- * メイン処理を実行し、エラーハンドリングを行う
- */
+/** Entry point: runs main() and exits with code 1 on failure. */
 ;(async () => {
   try {
     await main()

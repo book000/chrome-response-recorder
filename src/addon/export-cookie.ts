@@ -3,12 +3,17 @@ import { BaseAddon } from '.'
 import path from 'node:path'
 import fs from 'node:fs'
 
+/** Writes all browser cookies to a JSON file when registered on a page (once per page, at registration time). */
 export class ExportCookieAddon implements BaseAddon {
   readonly name = 'ExportCookie'
   readonly description = 'Exports cookies to file.'
 
   private cookieFilePath: string
 
+  /**
+   * @param cookieFilePath - Output file path
+   * @throws Error when cookieFilePath is empty or undefined
+   */
   constructor(cookieFilePath: string | undefined) {
     if (!cookieFilePath) {
       throw new Error('cookieFilePath is required for ExportCookieAddon')
