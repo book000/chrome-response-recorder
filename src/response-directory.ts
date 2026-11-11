@@ -1,22 +1,20 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-/** 同一ミリ秒の衝突を避けるために試行する連番サフィックスの上限 */
+/** Maximum numeric suffix tried when directories for the same millisecond already exist */
 const MAX_COLLISION_RETRIES = 10_000
 
 /**
- * 応答の保存先ディレクトリを排他的に作成する
+ * Exclusively creates the directory for one recorded response.
  *
- * `{baseDirectory}/{timestamp}/` の作成を試みる。
- * 既に存在する場合は `{timestamp}-1/`、`{timestamp}-2/` … と連番を付けて再試行する。
- * 同一ドメイン・パス・メソッドの応答が同一ミリ秒に処理されると衝突する。
- * 衝突しなければ `{baseDirectory}/{timestamp}/` をそのまま使う。
- * 親ディレクトリのみ再帰的に作成し、末端は再帰オプションなしの `mkdirSync` で作成する。
- * 作成に成功したディレクトリは自分だけが所有するため、`existsSync` と `mkdirSync` の間の競合による上書き・混在が起きない。
- * @param baseDirectory - `/responses/{domain}/{path}/{method}` 形式の親ディレクトリ
- * @param timestamp - ディレクトリ名の基準となるタイムスタンプ（ミリ秒）
- * @returns 作成したディレクトリのパス（末尾にスラッシュを含む）
- * @throws EEXIST 以外のエラー、または連番の上限まで衝突し続けた場合
+ * Tries `{baseDirectory}/{timestamp}/` first and, if it already exists, `{timestamp}-1/`, `{timestamp}-2/`, ...
+ * Responses for the same domain, path and method handled within the same millisecond collide.
+ * Only the parent directories are created recursively; the leaf is created with a non-recursive `mkdirSync`,
+ * so a successful call owns the directory and there is no check-then-create race that could overwrite or mix responses.
+ * @param baseDirectory - Parent directory, `/responses/{domain}/{path}/{method}`
+ * @param timestamp - Timestamp in milliseconds used as the base directory name
+ * @returns Path of the created directory, with a trailing slash
+ * @throws Any error other than EEXIST, or an Error when every suffix up to the retry limit is taken
  */
 export function createResponseDirectory(
   baseDirectory: string,

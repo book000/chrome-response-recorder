@@ -1,4 +1,4 @@
-# Node.js でビルド・テストを実行する。バージョンは .node-version に記載されているものを利用する
+# Runs the Node.js build and tests. The Node.js version comes from .node-version
 
 name: Node CI
 

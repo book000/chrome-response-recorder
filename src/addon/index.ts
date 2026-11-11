@@ -1,29 +1,30 @@
 import { Page } from 'puppeteer-core'
 
+/** Base class for addons that hook into a page. main.ts registers the enabled addons on every page. */
 export abstract class BaseAddon {
   /**
-   * Addonの名前
-   * @returns Addonの名前
+   * Addon name. ACTIVE_ADDONS entries are matched against it case-insensitively.
+   * @returns The addon name
    */
   abstract get name(): string
 
   /**
-   * Addonの説明
-   * @returns Addonの説明
+   * Addon description
+   * @returns The addon description
    */
   abstract get description(): string
 
   /**
-   * Addonを登録する
-   * @param page 操作対象のページ
-   * @returns void もしくは Promise<void>
+   * Registers the addon on a page
+   * @param page Page to operate on
+   * @returns void or Promise<void>
    */
   abstract register(page: Page): void | Promise<void>
 
   /**
-   * Addonを登録解除する
-   * @param page 操作対象のページ
-   * @returns void もしくは Promise<void>
+   * Unregisters the addon from a page. Called when the page is cleaned up
+   * @param page Page to operate on
+   * @returns void or Promise<void>
    */
   abstract unregister(page: Page): void | Promise<void>
 }

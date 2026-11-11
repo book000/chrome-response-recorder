@@ -4,19 +4,17 @@ import { setInterval } from 'node:timers/promises'
 import { generateSync as otpGenerateSync } from 'otplib'
 
 interface TwitterLoginAddonOptions {
-  /** Twitterのユーザー名 */
+  /** Twitter username */
   username?: string
-  /** Twitterのパスワード */
+  /** Twitter password */
   password?: string
-  /** Twitterのメールアドレス */
+  /** Twitter email address, entered when the login flow asks for it */
   emailAddress?: string
-  /** TwitterのOTPシークレット */
+  /** Twitter OTP secret, used to generate the code when the login flow asks for it */
   otpSecret?: string
 }
 
-/**
- * Twitterでのログイン操作に失敗した場合
- */
+/** Thrown when a step of the Twitter login flow fails (missing credential or element). */
 export class TwitterLoginOperationError extends Error {
   constructor(message?: string) {
     super(message)
@@ -24,6 +22,11 @@ export class TwitterLoginOperationError extends Error {
   }
 }
 
+/**
+ * Logs in to Twitter automatically. Once registered on a page, it checks the page URL every second
+ * and, on the login page, fills in username, email address, password and OTP code as the flow asks for them.
+ * The selectors depend on Twitter's current markup.
+ */
 export class TwitterLoginAddon implements BaseAddon {
   readonly name = 'TwitterLogin'
   readonly description = 'Automatically login to Twitter.'
@@ -36,7 +39,7 @@ export class TwitterLoginAddon implements BaseAddon {
   }
 
   register(page: Page): void {
-    // checkerPageChangedはページが監視終了するまで待ち続けるため、IIFEで意図的にawaitせず起動する
+    // checkerPageChanged keeps polling until unregister() aborts it, so it is started without awaiting
     ;(async () => {
       try {
         await this.checkerPageChanged(page)
@@ -68,7 +71,7 @@ export class TwitterLoginAddon implements BaseAddon {
   private async login(page: Page) {
     const pageUrl = new URL(page.url())
     if (!this.loginUrls.includes(pageUrl.origin + pageUrl.pathname)) {
-      // ログインページではない場合は何もしない
+      // not the login page
       return
     }
 
@@ -211,12 +214,12 @@ export class TwitterLoginAddon implements BaseAddon {
   }
 
   /**
-   * 指定したセレクタの要素を取得します。
+   * Waits for an element matching the selector.
    *
-   * @param page Puppeteer ページインスタンス
-   * @param selector セレクタ
-   * @param timeout タイムアウトミリ秒
-   * @returns 要素。見つからなかった場合は null
+   * @param page Puppeteer page
+   * @param selector CSS selector
+   * @param timeout Timeout in milliseconds
+   * @returns The element, or null if it did not appear within the timeout
    */
   private async getElement(
     page: Page,
