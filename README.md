@@ -40,7 +40,7 @@ All settings are environment variables. The container sets `TZ=Asia/Tokyo`, `CHR
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `TARGET_URL_REGEXS` | (empty) | Regular expressions, separated by commas or newlines. Only responses whose URL matches one of them are recorded. When empty, nothing is recorded. Because commas split the value, a regex cannot contain a comma |
+| `TARGET_URL_REGEXS` | (empty) | Regular expressions, separated by commas or newlines. Only responses whose URL matches one of them are recorded. Blank entries are ignored, and an invalid regex stops startup with an error. When empty, nothing is recorded. Because commas split the value, a regex cannot contain a comma |
 | `STARTUP_URLS` | (empty) | Comma-separated URLs. The first opens in the initial tab, the others in new tabs |
 | `VNC_SCREEN_SIZE` | `1024x768` | Screen size as `{width}x{height}`; also the window size and the default viewport |
 | `VIEWPORT_WIDTH`, `VIEWPORT_HEIGHT` | screen size | Override the viewport size in pixels |

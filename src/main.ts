@@ -11,6 +11,7 @@ import { BaseAddon } from './addon'
 import { createActiveAddons } from './addon/active-addons'
 import { ConsoleLogging } from './console-logging'
 import { createResponseDirectory } from './response-directory'
+import { parseTargetUrlRegexes } from './target-url-regexes'
 
 /** Settings read from environment variables. */
 const ENVIRONMENT = {
@@ -25,11 +26,7 @@ const ENVIRONMENT = {
     process.env.BROWSER_USER_AGENT ??
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
   /** Regular expressions (comma- or newline-separated) for URLs whose responses are recorded. When empty, nothing is recorded. */
-  TARGET_URL_REGEXS: process.env.TARGET_URL_REGEXS
-    ? process.env.TARGET_URL_REGEXS.split(/[,\n]/).map(
-        (regex) => new RegExp(regex.trim())
-      )
-    : [],
+  TARGET_URL_REGEXS: parseTargetUrlRegexes(process.env.TARGET_URL_REGEXS),
   /** Comma-separated URLs to open at startup. */
   STARTUP_URLS: process.env.STARTUP_URLS ?? '',
   /** Interval in seconds after which the process shuts down so that supervisord restarts it. 0 disables it. */
