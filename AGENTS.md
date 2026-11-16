@@ -19,7 +19,7 @@ A TypeScript / Node.js app that drives a visible Chromium through `puppeteer-cor
 pnpm install   # install dependencies (only pnpm is allowed by preinstall)
 pnpm dev       # tsx watch src/main.ts
 pnpm start     # tsx src/main.ts
-pnpm test      # node:test via tsx (src/response-directory.test.ts only)
+pnpm test      # node:test via tsx (response directories and addon selection)
 pnpm lint      # prettier --check + eslint + tsc
 pnpm fix       # prettier --write + eslint --fix
 ```
@@ -32,6 +32,7 @@ Run `pnpm lint` and `pnpm test` before committing. Node.js is pinned in `.node-v
 - `src/response-directory.ts`: exclusive creation of the per-response directory (numeric suffix on same-millisecond collisions); tested in `src/response-directory.test.ts`
 - `src/console-logging.ts`: `ConsoleLogging`, JSONL console logs
 - `src/addon/`: `BaseAddon` (`index.ts`), `TwitterLoginAddon`, `ExportCookieAddon`
+- `src/addon/active-addons.ts`: constructs only enabled addons; cookie export requires an output path only when enabled
 - `Dockerfile`, `entrypoint.sh`, `supervisord.conf`, `compose.yaml`: container setup (base image `zenika/alpine-chrome:with-puppeteer-xvfb`; supervisord runs `xvfb`, `x11vnc`, `novnc` on 8080 and `app`)
 
 ## Conventions

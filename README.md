@@ -4,7 +4,7 @@ Runs a visible Chromium (driven by Puppeteer) inside a Docker container and reco
 
 ## Quick start
 
-1. Create a `.env` file next to `compose.yaml` (the compose file requires it, even if empty) and set at least `EXPORT_COOKIE_FILE_PATH` (see [Configuration](#configuration)).
+1. Create a `.env` file next to `compose.yaml` (the compose file requires it, even if empty). Set `EXPORT_COOKIE_FILE_PATH` only if you enable the `ExportCookie` addon (see [Configuration](#configuration)).
 2. Start the container:
 
    ```bash
@@ -46,7 +46,7 @@ All settings are environment variables. The container sets `TZ=Asia/Tokyo`, `CHR
 | `CONSOLE_LOG_DIR` | (unset) | Directory for browser console logs. When unset, console logging is skipped |
 | `ACTIVE_ADDONS` | (empty) | Comma-separated addon names to enable, case-insensitive: `TwitterLogin`, `ExportCookie` |
 | `TWITTER_USERNAME`, `TWITTER_PASSWORD`, `TWITTER_EMAIL_ADDRESS`, `TWITTER_OTP_SECRET` | (unset) | Credentials for the `TwitterLogin` addon. The email address and the OTP secret are used only when the login flow asks for them |
-| `EXPORT_COOKIE_FILE_PATH` | (unset) | Output file of the `ExportCookie` addon. **Required in practice:** every addon is constructed at startup, and `ExportCookie` throws when this is unset, even if the addon is not enabled |
+| `EXPORT_COOKIE_FILE_PATH` | (unset) | Output file of the `ExportCookie` addon. Required only when `ExportCookie` is enabled; startup throws if it is enabled without a non-empty path |
 
 Example `.env`:
 
