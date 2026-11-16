@@ -8,9 +8,8 @@ import puppeteer, {
 import fs from 'node:fs'
 import path from 'node:path'
 import { BaseAddon } from './addon'
-import { TwitterLoginAddon } from './addon/twitter-login'
+import { createActiveAddons } from './addon/active-addons'
 import { ConsoleLogging } from './console-logging'
-import { ExportCookieAddon } from './addon/export-cookie'
 import { createResponseDirectory } from './response-directory'
 
 /** Settings read from environment variables. */
@@ -557,22 +556,15 @@ async function main() {
     },
   })
 
-  // All available addons. Every addon is constructed whether or not it is enabled,
-  // so ExportCookieAddon throws unless EXPORT_COOKIE_FILE_PATH is set
-  const addons: BaseAddon[] = [
-    new TwitterLoginAddon({
+  const activeAddons = createActiveAddons(ENVIRONMENT.ACTIVE_ADDONS, {
+    twitterLogin: {
       username: ENVIRONMENT.TWITTER_USERNAME,
       password: ENVIRONMENT.TWITTER_PASSWORD,
       emailAddress: ENVIRONMENT.TWITTER_EMAIL_ADDRESS,
       otpSecret: ENVIRONMENT.TWITTER_OTP_SECRET,
-    }),
-    new ExportCookieAddon(ENVIRONMENT.EXPORT_COOKIE_FILE_PATH),
-  ]
-  const activeAddons: BaseAddon[] = addons.filter((addon) =>
-    ENVIRONMENT.ACTIVE_ADDONS.map((name) =>
-      name.trim().toLocaleLowerCase()
-    ).includes(addon.name.toLocaleLowerCase())
-  )
+    },
+    exportCookieFilePath: ENVIRONMENT.EXPORT_COOKIE_FILE_PATH,
+  })
 
   let restartIntervalId: NodeJS.Timeout | null = null
   const browserEventListeners: (() => void)[] = []
