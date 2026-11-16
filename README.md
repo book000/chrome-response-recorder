@@ -22,7 +22,13 @@ Runs a visible Chromium (driven by Puppeteer) inside a Docker container and reco
 | `./downloads` | `/root/Downloads` | Browser downloads |
 | `./extension` | `/extension` | Mounted read-only, but nothing in this repository loads it |
 
-The sample `compose.yaml` publishes only port 8080 (noVNC). x11vnc listens on 5900 inside the container but runs without a password (`-nopw`), so do not expose either port to an untrusted network. To keep noVNC local to the host, publish it as `127.0.0.1:8080:8080`.
+The sample `compose.yaml` binds port 8080 (noVNC) to the host's loopback interface. x11vnc listens on 5900 inside the container but runs without a password (`-nopw`); anyone with access to either service can control the browser and its saved sessions. For remote access, keep the loopback binding and use an authenticated, encrypted connection, such as an SSH tunnel:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 user@remote-host
+```
+
+Authenticate to the remote host over SSH, then open <http://localhost:8080> on your local machine. Do not expose noVNC or x11vnc directly to a remote network.
 
 `compose.yaml` also pins `STARTUP_URLS`, `TARGET_URL_REGEXS`, `VNC_SCREEN_SIZE` and `ACTIVE_ADDONS` under `environment:`, which takes precedence over `.env`. Remove or edit those keys in `compose.yaml` to use your own values. Its `ACTIVE_ADDONS: Twitter` matches no addon name (see [Addons](#addons)), so no addon is enabled until you set `TwitterLogin` and/or `ExportCookie`.
 
