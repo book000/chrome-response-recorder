@@ -186,8 +186,8 @@ importers:
         version: 4.23.15
     devDependencies:
       '@book000/eslint-config':
-        specifier: 1.17.0
-        version: 1.17.0(eslint@10.15.0)(typescript@6.0.3)
+        specifier: 1.17.2
+        version: 1.17.2(eslint@10.15.0)(typescript@6.0.3)
       '@types/node':
         specifier: 26.6.6
         version: 26.6.6
@@ -218,10 +218,10 @@ importers:
 
 packages:
 
-  '@book000/eslint-config@1.17.0':
-    resolution: {integrity: sha512-tzvBdGWCjgkurB4xXC/tICEv7yQiXyRduJVlsQYI9VQnfRgBe4+ADRc9UitbaKfLZ8E1bXfwTkhiNM+n7hn/9A==}
+  '@book000/eslint-config@1.17.2':
+    resolution: {integrity: sha512-xyGeqoShjdWlj3RFSthB2ZzlhMjn0AG0eFVfq1lcyUPrLeWLVyZZQbIuwlLggkiQ8KPiv88vvT9LFKCT2rs5Kw==}
     peerDependencies:
-      eslint: 10.14.0
+      eslint: 10.15.0
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -1856,7 +1856,7 @@ packages:
 
 snapshots:
 
-  '@book000/eslint-config@1.17.0(eslint@10.15.0)(typescript@6.0.3)':
+  '@book000/eslint-config@1.17.2(eslint@10.15.0)(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/parser': 8.72.2(eslint@10.15.0)(typescript@6.0.3)
       eslint: 10.15.0
