@@ -1,7 +1,7 @@
 import { ConsoleMessage, HTTPRequest, Page, Protocol } from 'puppeteer-core'
-import fs from 'node:fs'
 // eslint-disable-next-line unicorn/import-style
 import { dirname } from 'node:path'
+import { appendPrivateFile, mkdirPrivate } from './private-fs'
 
 /**
  * Records a page's console output, page errors, failed requests and CDP `Runtime.consoleAPICalled` events
@@ -152,10 +152,7 @@ export class ConsoleLogging {
     const logFileDirectory = dirname(logFilePath)
     const logEntry = JSON.stringify(log) + '\n'
 
-    fs.mkdirSync(logFileDirectory, {
-      recursive: true,
-    })
-
-    fs.appendFileSync(logFilePath, logEntry, 'utf8')
+    mkdirPrivate(logFileDirectory)
+    appendPrivateFile(logFilePath, logEntry)
   }
 }

@@ -33,6 +33,24 @@ describe('createResponseDirectory', () => {
     assert.ok(fs.statSync(directory).isDirectory())
   })
 
+  it('creates the leaf and every new parent directory with mode 0700 under a permissive umask', () => {
+    const originalUmask = process.umask(0o022)
+    try {
+      const directory = createResponseDirectory(baseDirectory, TIMESTAMP)
+
+      for (const created of [
+        path.join(rootDirectory, 'example.com'),
+        path.join(rootDirectory, 'example.com', 'api'),
+        baseDirectory,
+        directory,
+      ]) {
+        assert.equal(fs.statSync(created).mode & 0o777, 0o700)
+      }
+    } finally {
+      process.umask(originalUmask)
+    }
+  })
+
   it('adds numeric suffixes to keep directories unique for the same timestamp', () => {
     const directories = [
       createResponseDirectory(baseDirectory, TIMESTAMP),
