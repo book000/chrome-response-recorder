@@ -10,6 +10,8 @@ import path from 'node:path'
 import { BaseAddon } from './addon'
 import { createActiveAddons } from './addon/active-addons'
 import { ConsoleLogging } from './console-logging'
+import { PRIVATE_FILE_MODE, writePrivateFile } from './private-fs'
+import { redactUrl } from './redact-url'
 import { createResponseDirectory } from './response-directory'
 import { parseTargetUrlRegexes } from './target-url-regexes'
 
@@ -96,12 +98,12 @@ async function responseHandler(response: HTTPResponse) {
 
   // Ignore CORS preflight requests
   if (response.request().method() === 'OPTIONS') {
-    console.log(`Ignoring preflight request: ${url}`)
+    console.log(`Ignoring preflight request: ${redactUrl(url)}`)
     return
   }
 
   console.log(
-    `Response received: ${method} ${url} - Status: ${status} ${statusText}`
+    `Response received: ${method} ${redactUrl(url)} - Status: ${status} ${statusText}`
   )
 
   // Layout: /responses/{domain}/{path}/{method}/{timestamp}/
@@ -138,11 +140,7 @@ async function responseHandler(response: HTTPResponse) {
 
   // detail.json: response metadata
   try {
-    fs.writeFileSync(
-      detailFilePath,
-      JSON.stringify(responseData, null, 2),
-      'utf8'
-    )
+    writePrivateFile(detailFilePath, JSON.stringify(responseData, null, 2))
   } catch (error) {
     console.error('Error writing detail file:', error)
     return
@@ -153,7 +151,9 @@ async function responseHandler(response: HTTPResponse) {
     const buffer = await response.buffer()
 
     await new Promise<void>((resolve, reject) => {
-      const writeStream = fs.createWriteStream(dataFilePath)
+      const writeStream = fs.createWriteStream(dataFilePath, {
+        mode: PRIVATE_FILE_MODE,
+      })
       let isSettled = false
 
       // Settle the promise exactly once (error, finish, close and timeout can all fire)
@@ -235,7 +235,7 @@ function createCloseHandler(
     page.off('response', responseListener)
     page.off('close', closeHandler)
     pageEventListeners.delete(page)
-    console.log(`Cleaned up event listeners for page: ${page.url()}`)
+    console.log(`Cleaned up event listeners for page: ${redactUrl(page.url())}`)
   }
 }
 
@@ -371,7 +371,7 @@ async function gracefulShutdown(
  */
 function createTargetCreatedHandler(addons: BaseAddon[]) {
   return (target: Target) => {
-    console.log(`New target created: ${target.url()}`)
+    console.log(`New target created: ${redactUrl(target.url())}`)
     // Only page targets (tabs)
     if (target.type() !== TargetType.PAGE) {
       return
@@ -384,7 +384,7 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
           return
         }
 
-        console.log(`New page opened: ${page.url()}`)
+        console.log(`New page opened: ${redactUrl(page.url())}`)
         registerResponseListener(page)
         const consoleLogging = new ConsoleLogging(
           page,
@@ -394,7 +394,9 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
         ;(async () => {
           try {
             await consoleLogging.start()
-            console.log(`Console logging started for page: ${page.url()}`)
+            console.log(
+              `Console logging started for page: ${redactUrl(page.url())}`
+            )
             appendPageCleanup(page, ...consoleLogging.getListeners())
           } catch (error) {
             console.error('Error starting console logging:', error)
@@ -403,7 +405,7 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
         ;(async () => {
           try {
             await registerAddons(addons, page)
-            console.log(`Addons registered for page: ${page.url()}`)
+            console.log(`Addons registered for page: ${redactUrl(page.url())}`)
           } catch (error) {
             console.error('Error registering addons:', error)
           }
@@ -624,7 +626,7 @@ async function main() {
 
   // Set up the tab that already exists at launch
   const [initialPage] = await browser.pages()
-  console.log(`Initial page opened: ${initialPage.url()}`)
+  console.log(`Initial page opened: ${redactUrl(initialPage.url())}`)
   registerResponseListener(initialPage)
   const consoleLogging = new ConsoleLogging(
     initialPage,
@@ -634,7 +636,9 @@ async function main() {
   ;(async () => {
     try {
       await consoleLogging.start()
-      console.log(`Console logging started for page: ${initialPage.url()}`)
+      console.log(
+        `Console logging started for page: ${redactUrl(initialPage.url())}`
+      )
       appendPageCleanup(initialPage, ...consoleLogging.getListeners())
     } catch (error) {
       console.error('Error starting console logging:', error)
@@ -669,19 +673,19 @@ async function main() {
   )
   if (startupUrls.length > 0) {
     const firstUrl = startupUrls[0]
-    console.log(`Opening initial URL: ${firstUrl}`)
+    console.log(`Opening initial URL: ${redactUrl(firstUrl)}`)
     try {
       await initialPage.goto(firstUrl, {
         waitUntil: 'networkidle2',
         timeout: 30_000,
       })
     } catch (error) {
-      console.error(`Error opening initial URL ${firstUrl}:`, error)
+      console.error(`Error opening initial URL ${redactUrl(firstUrl)}:`, error)
     }
   }
 
   for (const url of startupUrls.slice(1)) {
-    console.log(`Opening additional URL in new tab: ${url}`)
+    console.log(`Opening additional URL in new tab: ${redactUrl(url)}`)
     try {
       const newPage = await browser.newPage()
       registerResponseListener(newPage)
@@ -693,7 +697,9 @@ async function main() {
       ;(async () => {
         try {
           await consoleLogging.start()
-          console.log(`Console logging started for page: ${newPage.url()}`)
+          console.log(
+            `Console logging started for page: ${redactUrl(newPage.url())}`
+          )
           appendPageCleanup(newPage, ...consoleLogging.getListeners())
         } catch (error) {
           console.error('Error starting console logging:', error)
@@ -705,7 +711,7 @@ async function main() {
         timeout: 30_000,
       })
     } catch (error) {
-      console.error(`Error opening URL ${url}:`, error)
+      console.error(`Error opening URL ${redactUrl(url)}:`, error)
     }
   }
 }

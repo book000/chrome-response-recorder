@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer-core'
 import { BaseAddon } from '.'
 import path from 'node:path'
-import fs from 'node:fs'
+import { mkdirPrivate, writePrivateFile } from '../private-fs'
 
 /** Writes all browser cookies to a JSON file when registered on a page (once per page, at registration time). */
 export class ExportCookieAddon implements BaseAddon {
@@ -40,11 +40,8 @@ export class ExportCookieAddon implements BaseAddon {
       partitionKeyOpaque: cookie.partitionKeyOpaque ?? null,
     }))
 
-    const cookieDir = path.dirname(this.cookieFilePath)
-    if (!fs.existsSync(cookieDir)) {
-      fs.mkdirSync(cookieDir, { recursive: true })
-    }
-    fs.writeFileSync(this.cookieFilePath, JSON.stringify(cookieData, null, 2))
+    mkdirPrivate(path.dirname(this.cookieFilePath))
+    writePrivateFile(this.cookieFilePath, JSON.stringify(cookieData, null, 2))
     console.log(`Cookies exported to ${this.cookieFilePath}`)
   }
 

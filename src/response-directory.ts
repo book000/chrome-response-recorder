@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { mkdirPrivate, PRIVATE_DIRECTORY_MODE } from './private-fs'
 
 /** Maximum numeric suffix tried when directories for the same millisecond already exist */
 const MAX_COLLISION_RETRIES = 10_000
@@ -20,13 +21,13 @@ export function createResponseDirectory(
   baseDirectory: string,
   timestamp: number
 ): string {
-  fs.mkdirSync(baseDirectory, { recursive: true })
+  mkdirPrivate(baseDirectory)
 
   for (let attempt = 0; attempt <= MAX_COLLISION_RETRIES; attempt++) {
     const name = attempt === 0 ? String(timestamp) : `${timestamp}-${attempt}`
     const directory = path.join(baseDirectory, name)
     try {
-      fs.mkdirSync(directory)
+      fs.mkdirSync(directory, { mode: PRIVATE_DIRECTORY_MODE })
       return `${directory}/`
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {

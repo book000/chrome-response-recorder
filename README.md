@@ -90,6 +90,13 @@ Saved under the fixed path `/responses` inside the container:
 - CORS preflight (`OPTIONS`) requests are ignored.
 - `detail.json` can contain cookies, authorization headers and request bodies, so treat the responses directory as sensitive.
 
+### File permissions and log redaction
+
+- Response files, console logs and the `ExportCookie` file are created with mode `0600`, and the directories the app creates for them with mode `0700`. A umask can only narrow these modes further.
+- Files and directories that already exist keep their modes, for example a mounted `/responses` volume. The exception is the `ExportCookie` file, which is set to `0600` every time it is written. To tighten data recorded earlier, run `chmod -R go-rwx` on it yourself.
+- Because of these modes, anything that reads the output as another user must be given access through ownership or group-aware mounts.
+- Operational log lines (stdout and stderr) replace userinfo, sensitive query values and sensitive fragment values in URLs with `REDACTED`. `detail.json` and the console logs still contain full URLs, and error text from third-party libraries may still contain raw URLs.
+
 ### Console logs
 
 When `CONSOLE_LOG_DIR` is set, each page's console messages, page errors, failed requests and `Runtime.consoleAPICalled` events are appended as JSON Lines to `{CONSOLE_LOG_DIR}/{domain}/{path}/{timestamp}.jsonl`. Each line has `timestamp`, `eventName` (`console`, `pageerror`, `requestfailed` or `consoleApiCalled`), `type`, `message` and `extra`. Here `{timestamp}` is when logging for the page started.
