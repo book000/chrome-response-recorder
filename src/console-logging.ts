@@ -49,15 +49,17 @@ export class ConsoleLogging {
     this.page.on('console', consoleHandlerFunc)
     this.page.on('pageerror', errorHandlerFunc)
     this.page.on('requestfailed', requestFailedHandlerFunc)
-    const client = await this.page.createCDPSession()
-    await client.send('Runtime.enable')
-    client.on('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
-
     this.listeners.push(
       () => this.page.off('console', consoleHandlerFunc),
       () => this.page.off('pageerror', errorHandlerFunc),
-      () => this.page.off('requestfailed', requestFailedHandlerFunc),
-      () => client.off('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
+      () => this.page.off('requestfailed', requestFailedHandlerFunc)
+    )
+
+    const client = await this.page.createCDPSession()
+    await client.send('Runtime.enable')
+    client.on('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
+    this.listeners.push(() =>
+      client.off('Runtime.consoleAPICalled', consoleApiCalledHandlerFunc)
     )
   }
 
