@@ -43,6 +43,6 @@
     "lint:tsc": "tsc",
     "preinstall": "npx only-allow pnpm",
     "start": "tsx ./src/main.ts",
-    "test": "tsx --test src/response-directory.test.ts src/addon/active-addons.test.ts src/target-url-regexes.test.ts src/redact-url.test.ts src/private-fs.test.ts src/main.test.ts"
+    "test": "tsx --test src/response-directory.test.ts src/addon/active-addons.test.ts src/addon/twitter-login.test.ts src/target-url-regexes.test.ts src/redact-url.test.ts src/private-fs.test.ts src/main.test.ts"
   }
 }

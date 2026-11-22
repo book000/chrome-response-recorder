@@ -64,6 +64,7 @@ const ENVIRONMENT = {
 // Per-page cleanup functions, keyed weakly so closed pages can be garbage collected
 const pageEventListeners = new WeakMap<Page, Set<() => void | Promise<void>>>()
 const pageInitializations = new WeakMap<Page, Promise<void>>()
+const pageCleanups = new WeakMap<Page, Promise<void>>()
 
 function appendPageCleanup(
   page: Page,
@@ -223,39 +224,38 @@ function responseEventHandler(response: HTTPResponse) {
 }
 
 /**
- * Runs and clears all cleanup functions registered for a page.
+ * Runs all page cleanup callbacks once, sharing completion across close and shutdown.
  * @param page - Page to clean up
+ * @returns Completion of initialization and all registered cleanup callbacks
  */
-async function cleanupPage(page: Page) {
-  await pageInitializations.get(page)
-  const cleanupFunctions = pageEventListeners.get(page)
-  if (!cleanupFunctions) {
-    return
+export function cleanupPage(page: Page): Promise<void> {
+  const existing = pageCleanups.get(page)
+  if (existing) {
+    return existing
   }
 
-  pageEventListeners.delete(page)
-  const pendingCleanup: Promise<void>[] = []
-  for (const cleanup of cleanupFunctions) {
-    try {
-      const result = cleanup()
-      if (result instanceof Promise) {
-        pendingCleanup.push(
-          (async () => {
-            try {
-              await result
-            } catch (error) {
-              console.error('Error during page cleanup:', error)
-            }
-          })()
-        )
-      }
-    } catch (error) {
-      console.error('Error during page cleanup:', error)
+  const completion = (async () => {
+    await pageInitializations.get(page)
+    const cleanupFunctions = pageEventListeners.get(page)
+    if (!cleanupFunctions) {
+      return
     }
-  }
-  if (pendingCleanup.length > 0) {
-    await Promise.all(pendingCleanup)
-  }
+
+    pageEventListeners.delete(page)
+    await Promise.all(
+      [...cleanupFunctions].map(async (cleanup) => {
+        try {
+          await cleanup()
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error))
+          console.error('Error during page cleanup:', normalizedError)
+        }
+      })
+    )
+  })()
+  pageCleanups.set(page, completion)
+  return completion
 }
 
 /**
