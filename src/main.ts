@@ -63,6 +63,7 @@ const ENVIRONMENT = {
 
 // Per-page cleanup functions, keyed weakly so closed pages can be garbage collected
 const pageEventListeners = new WeakMap<Page, Set<() => void | Promise<void>>>()
+const pageInitializations = new WeakMap<Page, Promise<void>>()
 
 function appendPageCleanup(
   page: Page,
@@ -222,31 +223,59 @@ function responseEventHandler(response: HTTPResponse) {
 }
 
 /**
- * Creates the `close` listener that detaches the page's response and close listeners.
- * @param page - Target page
- * @param responseListener - Response listener to detach
- * @returns The close listener
+ * Runs and clears all cleanup functions registered for a page.
+ * @param page - Page to clean up
  */
-function createCloseHandler(
-  page: Page,
-  responseListener: (response: HTTPResponse) => void
-) {
-  return function closeHandler() {
-    page.off('response', responseListener)
-    page.off('close', closeHandler)
-    pageEventListeners.delete(page)
-    console.log(`Cleaned up event listeners for page: ${redactUrl(page.url())}`)
+async function cleanupPage(page: Page) {
+  await pageInitializations.get(page)
+  const cleanupFunctions = pageEventListeners.get(page)
+  if (!cleanupFunctions) {
+    return
+  }
+
+  pageEventListeners.delete(page)
+  const pendingCleanup: Promise<void>[] = []
+  for (const cleanup of cleanupFunctions) {
+    try {
+      const result = cleanup()
+      if (result instanceof Promise) {
+        pendingCleanup.push(
+          (async () => {
+            try {
+              await result
+            } catch (error) {
+              console.error('Error during page cleanup:', error)
+            }
+          })()
+        )
+      }
+    } catch (error) {
+      console.error('Error during page cleanup:', error)
+    }
+  }
+  if (pendingCleanup.length > 0) {
+    await Promise.all(pendingCleanup)
   }
 }
 
 /**
- * Registers the response listener on a page and schedules its removal when the page closes or is cleaned up.
+ * Registers response recording and cleans up all page resources on close.
  * @param page - Page to monitor
  */
 function registerResponseListener(page: Page) {
   page.on('response', responseEventHandler)
 
-  const closeHandler = createCloseHandler(page, responseEventHandler)
+  const closeHandler = () => {
+    ;(async () => {
+      try {
+        await cleanupPage(page)
+      } catch (error) {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+        console.error('Error cleaning up closed page:', normalizedError)
+      }
+    })()
+  }
 
   page.on('close', closeHandler)
 
@@ -285,38 +314,43 @@ async function registerAddons(addons: BaseAddon[], page: Page) {
 }
 
 /**
- * Runs and clears all cleanup functions registered for a page.
- * @param page - Page to clean up
+ * Shares one initialization promise across startup and targetcreated callers.
+ * @param page - Page to initialize
+ * @param addons - Enabled addons
+ * @returns Completion of response, console and addon registration
  */
-async function cleanupPage(page: Page) {
-  const cleanupFunctions = pageEventListeners.get(page)
-  if (!cleanupFunctions) {
-    return
+function initializePage(page: Page, addons: BaseAddon[]): Promise<void> {
+  const existing = pageInitializations.get(page)
+  if (existing) {
+    return existing
   }
 
-  const pendingCleanup: Promise<void>[] = []
-  for (const cleanup of cleanupFunctions) {
-    try {
-      const result = cleanup()
-      if (result instanceof Promise) {
-        pendingCleanup.push(
-          (async () => {
-            try {
-              await result
-            } catch (error) {
-              console.error('Error during page cleanup:', error)
-            }
-          })()
-        )
-      }
-    } catch (error) {
-      console.error('Error during page cleanup:', error)
+  // Defer setup until the shared promise is stored, including for reentrant callers.
+  // eslint-disable-next-line unicorn/prefer-promise-try
+  const initialization = Promise.resolve().then(async () => {
+    if (page.isClosed()) {
+      return
     }
-  }
-  pageEventListeners.delete(page)
-  if (pendingCleanup.length > 0) {
-    await Promise.all(pendingCleanup)
-  }
+
+    registerResponseListener(page)
+    const consoleLogging = new ConsoleLogging(page, ENVIRONMENT.CONSOLE_LOG_DIR)
+    await Promise.all([
+      (async () => {
+        try {
+          await consoleLogging.start()
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error))
+          console.error('Error starting console logging:', normalizedError)
+        } finally {
+          appendPageCleanup(page, ...consoleLogging.getListeners())
+        }
+      })(),
+      registerAddons(addons, page),
+    ])
+  })
+  pageInitializations.set(page, initialization)
+  return initialization
 }
 
 /**
@@ -385,31 +419,7 @@ function createTargetCreatedHandler(addons: BaseAddon[]) {
         }
 
         console.log(`New page opened: ${redactUrl(page.url())}`)
-        registerResponseListener(page)
-        const consoleLogging = new ConsoleLogging(
-          page,
-          ENVIRONMENT.CONSOLE_LOG_DIR
-        )
-        // Console logging and addon registration run concurrently
-        ;(async () => {
-          try {
-            await consoleLogging.start()
-            console.log(
-              `Console logging started for page: ${redactUrl(page.url())}`
-            )
-            appendPageCleanup(page, ...consoleLogging.getListeners())
-          } catch (error) {
-            console.error('Error starting console logging:', error)
-          }
-        })()
-        ;(async () => {
-          try {
-            await registerAddons(addons, page)
-            console.log(`Addons registered for page: ${redactUrl(page.url())}`)
-          } catch (error) {
-            console.error('Error registering addons:', error)
-          }
-        })()
+        await initializePage(page, addons)
       } catch (error) {
         console.error('Error getting page:', error)
       }
@@ -483,7 +493,7 @@ function setPreferenceExitType() {
 /**
  * Launches the browser, registers the listeners and addons, and opens the startup URLs.
  */
-async function main() {
+export async function main() {
   const [width, height] = ENVIRONMENT.VNC_SCREEN_SIZE.split('x').map(Number)
   const executablePath = ENVIRONMENT.CHROMIUM_PATH
 
@@ -627,24 +637,7 @@ async function main() {
   // Set up the tab that already exists at launch
   const [initialPage] = await browser.pages()
   console.log(`Initial page opened: ${redactUrl(initialPage.url())}`)
-  registerResponseListener(initialPage)
-  const consoleLogging = new ConsoleLogging(
-    initialPage,
-    ENVIRONMENT.CONSOLE_LOG_DIR
-  )
-  // Console logging starts without waiting for addon registration
-  ;(async () => {
-    try {
-      await consoleLogging.start()
-      console.log(
-        `Console logging started for page: ${redactUrl(initialPage.url())}`
-      )
-      appendPageCleanup(initialPage, ...consoleLogging.getListeners())
-    } catch (error) {
-      console.error('Error starting console logging:', error)
-    }
-  })()
-  await registerAddons(activeAddons, initialPage)
+  await initializePage(initialPage, activeAddons)
 
   // Handle tabs opened later
   const targetCreatedHandler = createTargetCreatedHandler(activeAddons)
@@ -688,24 +681,7 @@ async function main() {
     console.log(`Opening additional URL in new tab: ${redactUrl(url)}`)
     try {
       const newPage = await browser.newPage()
-      registerResponseListener(newPage)
-      const consoleLogging = new ConsoleLogging(
-        newPage,
-        ENVIRONMENT.CONSOLE_LOG_DIR
-      )
-      // Console logging starts without waiting for addon registration
-      ;(async () => {
-        try {
-          await consoleLogging.start()
-          console.log(
-            `Console logging started for page: ${redactUrl(newPage.url())}`
-          )
-          appendPageCleanup(newPage, ...consoleLogging.getListeners())
-        } catch (error) {
-          console.error('Error starting console logging:', error)
-        }
-      })()
-      await registerAddons(activeAddons, newPage)
+      await initializePage(newPage, activeAddons)
       await newPage.goto(url, {
         waitUntil: 'networkidle2',
         timeout: 30_000,
@@ -716,13 +692,16 @@ async function main() {
   }
 }
 
-/** Entry point: runs main() and exits with code 1 on failure. */
-;(async () => {
-  try {
-    await main()
-  } catch (error) {
-    console.error('Error in main function:', error)
-    // eslint-disable-next-line unicorn/no-process-exit
-    process.exit(1)
-  }
-})()
+// CommonJS entrypoint detection allows importing main without launching a browser.
+// eslint-disable-next-line unicorn/prefer-module
+if (require.main === module) {
+  ;(async () => {
+    try {
+      await main()
+    } catch (error) {
+      console.error('Error in main function:', error)
+      // eslint-disable-next-line unicorn/no-process-exit
+      process.exit(1)
+    }
+  })()
+}
