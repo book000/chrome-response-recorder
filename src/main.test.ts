@@ -85,6 +85,7 @@ class TestBrowser extends EventEmitter {
 }
 
 let main: typeof import('./main').main
+let cleanupPage: typeof import('./main').cleanupPage
 
 before(async () => {
   const environment = { ...process.env }
@@ -98,7 +99,7 @@ before(async () => {
     RESTART_INTERVAL_SECONDS: '0',
   })
   try {
-    ;({ main } = await import('./main'))
+    ;({ main, cleanupPage } = await import('./main'))
   } finally {
     process.env = environment
   }
@@ -227,6 +228,81 @@ describe('page initialization through main', () => {
     for (const page of browser.tabs) {
       assertClean(page)
     }
+  })
+
+  for (const first of ['close', 'shutdown'] as const) {
+    it(`shares pending addon cleanup when ${first} starts before concurrent cleanup`, async (context) => {
+      const { browser, unregister, errors } = setup(context)
+      await main()
+      const page = browser.tabs[0]
+      const ready = Promise.withResolvers<undefined>()
+      unregister.mock.mockImplementation(() => ready.promise)
+
+      let completion: Promise<void>
+      if (first === 'close') {
+        page.close()
+        completion = cleanupPage(page as unknown as Page)
+      } else {
+        completion = cleanupPage(page as unknown as Page)
+        page.close()
+      }
+      await context.waitFor(() => {
+        assert.equal(unregister.mock.callCount(), 1)
+      })
+      const concurrent = cleanupPage(page as unknown as Page)
+      assert.equal(concurrent, completion)
+      let settled = false
+      concurrent.then(() => {
+        settled = true
+      })
+      await setImmediate()
+      assert.equal(settled, false)
+      assertClean(page)
+      assert.equal(browser.tabs[1].listenerCount('response'), 1)
+
+      ready.resolve(undefined)
+      await Promise.all([completion, concurrent])
+      await cleanupPage(page as unknown as Page)
+      assert.equal(unregister.mock.callCount(), 1)
+      assert.equal(errors.mock.callCount(), 0)
+    })
+  }
+
+  it('waits for addon registration during concurrent close and shutdown cleanup', async (context) => {
+    const { browser, register, unregister } = setup(context)
+    await main()
+    const ready = Promise.withResolvers<undefined>()
+    register.mock.mockImplementation(() => ready.promise)
+    const popup = await browser.newPage()
+    await context.waitFor(() => {
+      assert.equal(register.mock.callCount(), 3)
+    })
+
+    popup.close()
+    const completion = cleanupPage(popup as unknown as Page)
+    await setImmediate()
+    assert.equal(unregister.mock.callCount(), 0)
+    ready.resolve(undefined)
+    await completion
+    assert.equal(unregister.mock.callCount(), 1)
+    assertClean(popup)
+  })
+
+  it('removes listeners and completes cleanup when addon unregistration rejects', async (context) => {
+    const { browser, unregister, errors } = setup(context)
+    await main()
+    unregister.mock.mockImplementation(() =>
+      Promise.reject(new Error('Cleanup failed'))
+    )
+    const page = browser.tabs[0]
+
+    page.close()
+    await cleanupPage(page as unknown as Page)
+    await cleanupPage(page as unknown as Page)
+
+    assertClean(page)
+    assert.equal(unregister.mock.callCount(), 1)
+    assert.equal(errors.mock.callCount(), 1)
   })
 
   it('cleans up resources when a page closes during initialization', async (context) => {

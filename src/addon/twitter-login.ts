@@ -32,38 +32,64 @@ export class TwitterLoginAddon implements BaseAddon {
   readonly description = 'Automatically login to Twitter.'
 
   private loginUrls = ['https://x.com/i/flow/login']
-  private controller = new AbortController()
+  private pollers = new WeakMap<
+    Page,
+    { controller: AbortController; stopped: Promise<void> }
+  >()
   private options: TwitterLoginAddonOptions
   constructor(options: TwitterLoginAddonOptions) {
     this.options = options
   }
 
   register(page: Page): void {
-    // checkerPageChanged keeps polling until unregister() aborts it, so it is started without awaiting
-    ;(async () => {
+    if (this.pollers.has(page) || page.isClosed()) {
+      return
+    }
+
+    const controller = new AbortController()
+    const stopped = (async () => {
       try {
-        await this.checkerPageChanged(page)
+        await this.checkerPageChanged(page, controller.signal)
       } catch (error) {
-        if (error instanceof TwitterLoginOperationError) {
-          console.error(`Twitter operation error: ${error.message}`)
-        } else {
-          console.error('An unexpected error occurred:', error)
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+        if (
+          controller.signal.aborted &&
+          normalizedError.name === 'AbortError'
+        ) {
+          return
         }
+        if (normalizedError instanceof TwitterLoginOperationError) {
+          console.error(`Twitter operation error: ${normalizedError.message}`)
+        } else {
+          console.error('An unexpected error occurred:', normalizedError)
+        }
+      } finally {
+        this.pollers.delete(page)
       }
     })()
+    this.pollers.set(page, { controller, stopped })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  unregister(_page: Page): void | Promise<void> {
-    this.controller.abort()
+  async unregister(page: Page): Promise<void> {
+    const poller = this.pollers.get(page)
+    if (!poller) {
+      return
+    }
+    poller.controller.abort()
+    await poller.stopped
   }
 
-  async checkerPageChanged(page: Page) {
+  /** Polls until this page closes or its registration is cancelled. */
+  async checkerPageChanged(page: Page, signal: AbortSignal) {
     const interval = setInterval(1 * 1000, undefined, {
-      signal: this.controller.signal,
+      signal,
     })
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for await (const _tick of interval) {
+      if (signal.aborted || page.isClosed()) {
+        return
+      }
       await this.login(page)
     }
   }
