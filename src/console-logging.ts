@@ -14,6 +14,7 @@ export class ConsoleLogging {
   private timestamp: number = Date.now()
   private logDirectory: string | undefined
   private listeners: (() => void)[] = []
+  private disabled = false
 
   /**
    * @param page - Page to record
@@ -137,6 +138,9 @@ export class ConsoleLogging {
     message: string,
     extra: Record<string, any>
   ): void {
+    if (this.disabled) {
+      return
+    }
     const log = {
       timestamp: new Date().toISOString(),
       eventName,
@@ -154,7 +158,17 @@ export class ConsoleLogging {
     const logFileDirectory = dirname(logFilePath)
     const logEntry = JSON.stringify(log) + '\n'
 
-    mkdirPrivate(logFileDirectory)
-    appendPrivateFile(logFilePath, logEntry)
+    try {
+      mkdirPrivate(logFileDirectory)
+      appendPrivateFile(logFilePath, logEntry)
+    } catch (error) {
+      this.disabled = true
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error))
+      console.error(
+        'Console logging disabled after a filesystem failure:',
+        normalizedError
+      )
+    }
   }
 }
