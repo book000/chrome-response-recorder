@@ -23,10 +23,6 @@ const ENVIRONMENT = {
   CHROMIUM_PATH: process.env.CHROMIUM_PATH ?? '/usr/bin/chromium-browser',
   /** Browser user data directory (profile). */
   USER_DATA_DIR: process.env.VNC_USER_DATA_DIR ?? '/userdata',
-  /** Browser User-Agent string. */
-  BROWSER_USER_AGENT:
-    process.env.BROWSER_USER_AGENT ??
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
   /** Regular expressions (comma- or newline-separated) for URLs whose responses are recorded. When empty, nothing is recorded. */
   TARGET_URL_REGEXS: parseTargetUrlRegexes(process.env.TARGET_URL_REGEXS),
   /** Comma-separated URLs to open at startup. */
@@ -499,7 +495,6 @@ export async function main() {
 
   console.log(`Launching browser with executable path: ${executablePath}`)
   console.log(`Screen size: ${width}x${height}`)
-  console.log(`User agent: ${ENVIRONMENT.BROWSER_USER_AGENT}`)
   console.log(`User data directory: ${ENVIRONMENT.USER_DATA_DIR}`)
   console.log(
     `Target URL regexes: ${ENVIRONMENT.TARGET_URL_REGEXS.map((regex) => regex.toString()).join(', ')}`
