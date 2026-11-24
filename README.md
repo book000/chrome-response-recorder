@@ -46,7 +46,6 @@ All settings are environment variables. The container sets `TZ=Asia/Tokyo`, `CHR
 | `VIEWPORT_WIDTH`, `VIEWPORT_HEIGHT` | screen size | Override the viewport size in pixels |
 | `VNC_USER_DATA_DIR` | `/userdata` | Chromium user data directory |
 | `CHROMIUM_PATH` | `/usr/bin/chromium-browser` | Chromium executable |
-| `BROWSER_USER_AGENT` | an old Chrome 58 string | User-Agent string defined in `src/main.ts` |
 | `RESTART_INTERVAL_SECONDS` | `0` (disabled) | After this many seconds the process shuts the browser down and exits, and supervisord starts it again |
 | `OPEN_DEVTOOLS` | `false` | `true` opens DevTools for every tab |
 | `CONSOLE_LOG_DIR` | (unset) | Directory for browser console logs. When unset, console logging is skipped |
